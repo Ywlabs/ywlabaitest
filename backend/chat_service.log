@@ -1,0 +1,18 @@
+2025-05-29 15:25:28,627 - INFO - Use pytorch device_name: cpu
+2025-05-29 15:25:28,627 - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+2025-05-29 15:25:35,329 - WARNING -  * Debugger is active!
+2025-05-29 15:25:35,333 - INFO -  * Debugger PIN: 623-976-075
+2025-05-29 15:26:18,710 - INFO -  * Detected change in 'D:\\Develop\\workspace-ywlabs\\backend\\common\\logger.py', reloading
+2025-05-29 15:26:35,805 - INFO - Use pytorch device_name: cpu
+2025-05-29 15:26:35,806 - INFO - Load pretrained SentenceTransformer: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+2025-05-29 15:26:44,036 - WARNING -  * Debugger is active!
+2025-05-29 15:26:44,041 - INFO -  * Debugger PIN: 623-976-075
+2025-05-29 15:26:48,027 - INFO - 127.0.0.1 - - [29/May/2025 15:26:48] "GET /api/chat/history HTTP/1.1" 200 -
+2025-05-29 15:26:48,126 - INFO - 127.0.0.1 - - [29/May/2025 15:26:48] "GET /api/chat/popular HTTP/1.1" 200 -
+2025-05-29 15:26:54,853 - INFO - 127.0.0.1 - - [29/May/2025 15:26:54] "OPTIONS /api/chat HTTP/1.1" 200 -
+2025-05-29 15:26:54,902 - INFO - [시작] 질문 처리 시작: 영우랩스는 어떤회사야?
+2025-05-29 15:26:54,904 - INFO - [1단계] 유사 질문 검색 시작
+2025-05-29 15:27:31,328 - WARNING - [1단계 완료] 유사 질문을 찾지 못함 (소요시간: 36.42초)
+2025-05-29 15:27:31,329 - WARNING - [완료] 기본 응답 반환 (총 소요시간: 36.43초)
+2025-05-29 15:27:31,426 - INFO - 127.0.0.1 - - [29/May/2025 15:27:31] "POST /api/chat HTTP/1.1" 200 -
+2025-05-29 15:28:00,696 - INFO -  * Detected change in 'D:\\Develop\\workspace-ywlabs\\backend\\routes\\chat_routes.py', reloading

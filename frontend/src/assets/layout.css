@@ -1,0 +1,57 @@
+/* 공통 레이아웃 및 사이드바 스타일 */
+
+.page-container {
+  display: flex;
+  gap: 3rem;
+}
+
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 24px;
+}
+
+.sidebar h3 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #42b983;
+  text-align: left;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+  align-items: flex-start;
+}
+
+.menu-item {
+  text-decoration: none;
+  color: #2c3e50;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  transition: all 0.3s;
+  text-align: left;
+  display: block;
+}
+
+.menu-item:hover {
+  background: #f8f9fa;
+  color: #42b983;
+}
+
+.router-link-active {
+  background: #f8f9fa;
+  color: #42b983;
+  font-weight: 500;
+}
+
+.content {
+  flex: 1;
+} 

@@ -1,0 +1,60 @@
+from flask import Flask
+from flask_cors import CORS
+from routes.chat_routes import chat_bp
+from routes.vector_routes import vector_bp
+from routes.employee_routes import employee_bp
+from services.vector_service import initialize_vector_store, validate_vector_store
+from common.logger import setup_logger
+import threading
+
+# 로거 설정
+logger = setup_logger('app')
+
+def create_app():
+    app = Flask(__name__)
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173", 
+                "http://127.0.0.1:5173",
+                "http://192.168.0.84:5173",
+                "http://localhost:3000",      # 추가
+                "http://127.0.0.1:3000"       # 추가
+            ],
+            "methods": ["GET", "POST", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
+    
+    # 블루프린트 등록
+    app.register_blueprint(chat_bp)
+    app.register_blueprint(vector_bp)
+    app.register_blueprint(employee_bp)
+    
+    return app
+
+app = create_app()
+
+def initialize_backend():
+    """백엔드 초기화 함수"""
+    print("\n=== 백엔드 초기화 시작 ===")
+    
+    # 벡터 스토어 초기화
+    print("\n1. 벡터 스토어 초기화 중...")
+    result = initialize_vector_store()
+    print(f"✓ {result['message']}")
+    
+    # 벡터 스토어 검증
+    print("\n2. 벡터 스토어 검증 중...")
+    is_valid = validate_vector_store()
+    if is_valid:
+        print("✓ 벡터 스토어 검증 완료: 정상")
+    else:
+        print("⚠ 벡터 스토어 검증 실패: 문제 발견")
+    
+    print("\n=== 백엔드 초기화 완료 ===\n")
+
+if __name__ == '__main__':
+    initialize_backend()
+    app.run(debug=True, port=5000, host='0.0.0.0')  # host를 0.0.0.0으로 변경하여 모든 IP에서 접근 가능하도록 함 

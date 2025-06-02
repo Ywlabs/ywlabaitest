@@ -1,0 +1,4 @@
+2025-05-30 15:40:15,425 - employee_routes - INFO - 직원 정보 조회 시작
+2025-05-30 15:40:15,435 - employee_routes - ERROR - 직원 정보 조회 중 오류 발생: Connection.cursor() got an unexpected keyword argument 'dictionary'
+2025-05-30 15:40:22,561 - employee_routes - INFO - 직원 정보 조회 시작
+2025-05-30 15:40:22,596 - employee_routes - ERROR - 직원 정보 조회 중 오류 발생: Connection.cursor() got an unexpected keyword argument 'dictionary'
