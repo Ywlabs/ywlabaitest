@@ -9,6 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 import threading
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
+from functools import lru_cache
+import hashlib
+import re
 
 # 로거 설정
 logger = setup_logger('vector_service')
@@ -16,11 +19,50 @@ logger = setup_logger('vector_service')
 # Sentence Transformer 모델 초기화
 model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
 
+# 캐시 크기 설정 (최근 1000개 쿼리 결과 캐싱)
+CACHE_SIZE = 1000
+
 class VectorStore:
     def __init__(self):
         self.metadata = {}  # pattern_id -> (pattern_text, response, target_url, button_text)
         self.vector_status = {}  # pattern_id -> status
+        self._cache = {}  # 캐시 저장소
+        self._cache_lock = threading.Lock()  # 캐시 동기화를 위한 락
         
+    def _get_cache_key(self, question_vector):
+        """캐시 키 생성"""
+        # 벡터를 문자열로 변환하여 해시 생성
+        vector_str = json.dumps(question_vector, sort_keys=True)
+        return hashlib.md5(vector_str.encode()).hexdigest()
+        
+    def _get_from_cache(self, cache_key):
+        """캐시에서 결과 조회"""
+        with self._cache_lock:
+            return self._cache.get(cache_key)
+            
+    def _save_to_cache(self, cache_key, result):
+        """결과를 캐시에 저장"""
+        with self._cache_lock:
+            # 캐시 크기 제한
+            if len(self._cache) >= CACHE_SIZE:
+                # 가장 오래된 항목 제거
+                oldest_key = next(iter(self._cache))
+                del self._cache[oldest_key]
+            self._cache[cache_key] = result
+
+    def _normalize_text(self, text):
+        """텍스트 정규화"""
+        # 소문자 변환 및 특수문자 제거
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', '', text)
+        return text.strip()
+
+    def _is_partial_match(self, pattern, text):
+        """부분 문자열 매칭 검사"""
+        pattern = self._normalize_text(pattern)
+        text = self._normalize_text(text)
+        return pattern in text
+
     def load_metadata(self):
         """메타데이터 로드"""
         conn = get_db_connection()
@@ -98,13 +140,22 @@ def find_similar_question(question_vector, top_k=1):
     if isinstance(question_vector, np.ndarray):
         question_vector = question_vector.tolist()
     
+    # 캐시 키 생성
+    cache_key = vector_store._get_cache_key(question_vector)
+    
+    # 캐시에서 결과 확인
+    cached_result = vector_store._get_from_cache(cache_key)
+    if cached_result:
+        logger.info("캐시된 결과 사용")
+        return cached_result
+    
     # DB에서 벡터 데이터 조회
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             # 1. 먼저 patterns 테이블에서 키워드 매핑 정보를 가져옴
             cursor.execute('''
-                SELECT DISTINCT intent_tag, pattern
+                SELECT DISTINCT intent_tag, pattern, priority
                 FROM patterns
                 WHERE is_active = 1
                 ORDER BY priority DESC
@@ -113,17 +164,23 @@ def find_similar_question(question_vector, top_k=1):
             for row in cursor.fetchall():
                 if row['intent_tag'] not in intent_patterns:
                     intent_patterns[row['intent_tag']] = []
-                intent_patterns[row['intent_tag']].append(row['pattern'])
+                intent_patterns[row['intent_tag']].append({
+                    'pattern': row['pattern'],
+                    'priority': row['priority']
+                })
             
             # 2. 키워드 기반 필터링 조건 생성
             keyword_filter = ""
+            matched_intents = set()
             for intent_tag, patterns in intent_patterns.items():
-                for pattern in patterns:
-                    if pattern in question_vector:
-                        keyword_filter = f"OR p.intent_tag = '{intent_tag}'"
+                for pattern_info in patterns:
+                    pattern = pattern_info['pattern']
+                    if vector_store._is_partial_match(pattern, question_vector):
+                        matched_intents.add(intent_tag)
                         break
-                if keyword_filter:
-                    break
+            
+            if matched_intents:
+                keyword_filter = "OR p.intent_tag IN (" + ",".join([f"'{intent}'" for intent in matched_intents]) + ")"
             
             # 3. 벡터 데이터 조회
             cursor.execute(f'''
@@ -158,6 +215,8 @@ def find_similar_question(question_vector, top_k=1):
             for result in results:
                 stored_vector = np.array(json.loads(result['vector']), dtype=float)
                 q_vector = np.array(question_vector, dtype=float)
+                
+                # 코사인 유사도 계산
                 similarity = np.dot(q_vector, stored_vector) / (
                     np.linalg.norm(q_vector) * np.linalg.norm(stored_vector)
                 )
@@ -169,23 +228,32 @@ def find_similar_question(question_vector, top_k=1):
                 # 패턴 매칭 보너스
                 intent_tag = result['intent_tag']
                 if intent_tag in intent_patterns:
-                    for pattern in intent_patterns[intent_tag]:
-                        if pattern in question_vector:
-                            similarity = similarity * 1.2
+                    for pattern_info in intent_patterns[intent_tag]:
+                        pattern = pattern_info['pattern']
+                        if vector_store._is_partial_match(pattern, question_vector):
+                            # 패턴의 우선순위에 따라 보너스 점수 조정
+                            bonus = 1.2 + (pattern_info['priority'] / 100)
+                            similarity = similarity * bonus
                             break
                 
-                if similarity > max_similarity:
-                    max_similarity = similarity
-                    best_match = {
-                        'pattern_id': result['pattern_id'],
-                        'pattern_text': result['pattern_text'],
-                        'response': result['response'],
-                        'pattern_type': result['pattern_type'],
-                        'response_type': result['response_type'],
-                        'route_code': result['route_code'],
-                        'intent_tag': result['intent_tag'],
-                        'similarity_score': float(similarity)
-                    }
+                # 최소 유사도 임계값 적용
+                if similarity > 0.6:  # 임계값 조정
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        best_match = {
+                            'pattern_id': result['pattern_id'],
+                            'pattern_text': result['pattern_text'],
+                            'response': result['response'],
+                            'pattern_type': result['pattern_type'],
+                            'response_type': result['response_type'],
+                            'route_code': result['route_code'],
+                            'intent_tag': result['intent_tag'],
+                            'similarity_score': float(similarity)
+                        }
+            
+            # 결과를 캐시에 저장
+            if best_match:
+                vector_store._save_to_cache(cache_key, best_match)
             
             logger.info(f"유사도 계산 완료 (소요시간: {time.time() - start_time:.2f}초)")
             return best_match

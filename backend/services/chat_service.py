@@ -40,14 +40,39 @@ def get_gpt_response(question, find_similar_question_func):
             logger.info("[2단계] GPT 응답 생성 시작")
             gpt_start = time.time()
             
+            # 시스템 프롬프트 개선
+            system_prompt = """당신은 영우랩스의 도우미 어시스턴트입니다. 다음과 같은 역할을 수행합니다:
+1. 주어진 컨텍스트를 바탕으로 정확하고 간결한 답변을 제공합니다
+2. 직원 정보에 대한 질문이면 관련된 상세 정보에 초점을 맞춥니다
+3. 회사 절차에 대한 질문이면 단계별 안내를 제공합니다
+4. 확실하지 않은 내용이 있다면, 그 한계를 인정하고 대안적인 정보 획득 방법을 제안합니다
+5. 항상 전문적이고 친근한 톤을 유지합니다
+6. 컨텍스트에 충분한 정보가 없다면, 그 사실을 말하고 추가 정보를 찾을 수 있는 방법을 제안합니다
+
+다음 사항을 기억하세요:
+- 답변은 구체적이고 명확해야 합니다
+- 여러 항목이 있는 경우 글머리 기호를 사용합니다
+- 관련 링크나 참조가 있다면 포함합니다
+- 회사 용어를 일관되게 사용합니다
+- 질문이 모호하다면 명확히 해달라고 요청합니다
+- 컨텍스트가 질문과 완전히 일치하지 않는다면, 어떤 정보가 있는지 설명합니다"""
+
+            # 사용자 프롬프트 개선
+            user_prompt = f"""컨텍스트: {best_match.get('pattern_text')}
+질문: {question}
+
+컨텍스트를 바탕으로 도움이 되는 답변을 제공해주세요. 컨텍스트가 질문을 완전히 다루지 못한다면, 그 사실을 인정하고 가능한 최선의 답변을 제공해주세요. 확실하지 않은 부분이 있다면 그렇게 말씀해주세요."""
+
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant for 영우랩스 company. Use the provided context to answer questions."},
-                    {"role": "user", "content": f"Context: {best_match}\nQuestion: {question}"}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=500,  # 응답 길이 제한
-                temperature=0.7  # 응답 다양성 조절
+                max_tokens=500,
+                temperature=0.7,
+                presence_penalty=0.6,  # 반복 방지
+                frequency_penalty=0.3  # 다양성 증가
             )
             
             gpt_time = time.time() - gpt_start
@@ -178,7 +203,7 @@ def get_popular_questions():
 def get_db_response(user_message, similar_question):
     """DB 기반 답변 생성 및 직원 정보 처리"""
     response = None
-    if similar_question and similar_question.get('similarity_score', 0) > 0.6:  # 임계값 0.7에서 0.6으로 조정
+    if similar_question and similar_question.get('similarity_score', 0) > 0.7:  # 임계값 0.7
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
