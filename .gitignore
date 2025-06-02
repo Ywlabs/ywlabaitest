@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# 가상환경
+venv/
+.env
+.env.*
+
+# 로그/임시파일
+*.log
+*.tmp
+*.swp
+
+# DB/캐시
+*.sqlite3
+*.db
+*.sqlite
+*.bak
+*.sql
+*.sql.gz
+
+# Jupyter
+.ipynb_checkpoints
+
+# IDE/에디터
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+Thumbs.db
+
+# 빌드/배포
+build/
+dist/
+*.egg-info/
+
+# 기타
+node_modules/ 
