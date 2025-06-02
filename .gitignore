@@ -1,9 +1,110 @@
 # Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.pyc
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environment
+.env
+.env.*
+!.env.example
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+logs/
+chat_service.log
+vector_service.log
+
+# Cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Vector store
+vector_store/
+*.npy
+*.npz
+
+# Test
+.coverage
+coverage.xml
+.pytest_cache/
+.tox/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Build and deploy
+build/
+dist/
+*.egg-info/
+*.egg
+deploy/
+docker-compose.override.yml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Local configuration
+config.local.py
 
 # 가상환경
 venv/
