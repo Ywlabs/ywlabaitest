@@ -238,3 +238,6 @@
 2025-06-02 18:48:30,185 - vector_service - INFO - 총 패턴 수: 213
 2025-06-02 18:48:30,186 - vector_service - INFO - 총 벡터 수: 213
 2025-06-02 18:48:30,189 - vector_service - INFO - 벡터 스토어 검증 완료: 정상
+2025-06-02 23:19:06,942 - vector_service - INFO - 벡터 스토어 초기화 시작
+2025-06-02 23:19:16,974 - vector_service - ERROR - 벡터 스토어 초기화 중 오류 발생: (2003, "Can't connect to MySQL server on '192.168.0.200' (timed out)")
+2025-06-02 23:19:16,975 - vector_service - INFO - 벡터 스토어 검증 시작

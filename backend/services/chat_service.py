@@ -178,13 +178,14 @@ def get_popular_questions():
 def get_db_response(user_message, similar_question):
     """DB 기반 답변 생성 및 직원 정보 처리"""
     response = None
-    if similar_question and similar_question.get('similarity_score', 0) > 0.7:
+    if similar_question and similar_question.get('similarity_score', 0) > 0.6:  # 임계값 0.7에서 0.6으로 조정
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
                 cursor.execute('''
                     SELECT r.response, r.response_type, r.route_code,
-                           rt.route_name, rt.route_path, rt.route_type
+                           rt.route_name, rt.route_path, rt.route_type,
+                           r.template_variables
                     FROM responses r
                     LEFT JOIN routes rt ON r.route_code = rt.route_code
                     WHERE r.intent_tag = %s AND r.is_active = 1
@@ -208,26 +209,35 @@ def get_db_response(user_message, similar_question):
                                 conn2.close()
                             if employee_dict:
                                 employee_response = get_employee_info_and_fill_template(name, response_data['response'])
-                        if employee_dict:
-                            response = {
-                                'status': 'success',
-                                'data': {
-                                    'response': None,
-                                    'response_type': 'employee_info',
-                                    'employee': employee_dict,
-                                    'route_code': response_data['route_code'],
-                                    'route_name': response_data['route_name'],
-                                    'route_path': response_data['route_path'],
-                                    'route_type': response_data['route_type']
+                                response = {
+                                    'status': 'success',
+                                    'data': {
+                                        'response': employee_response,
+                                        'response_type': 'dynamic',
+                                        'route_code': None,
+                                        'route_name': None,
+                                        'route_path': None,
+                                        'route_type': None
+                                    }
                                 }
-                            }
+                            else:
+                                response = {
+                                    'status': 'success',
+                                    'data': {
+                                        'response': f'죄송합니다. {name}님의 정보를 찾을 수 없습니다.',
+                                        'response_type': 'text',
+                                        'route_code': None,
+                                        'route_name': None,
+                                        'route_path': None,
+                                        'route_type': None
+                                    }
+                                }
                         else:
                             response = {
                                 'status': 'success',
                                 'data': {
-                                    'response': f"'{name}' 직원 정보를 찾을 수 없습니다.",
-                                    'response_type': 'employee_info',
-                                    'employee': None,
+                                    'response': '직원 이름을 입력해주세요.',
+                                    'response_type': 'text',
                                     'route_code': None,
                                     'route_name': None,
                                     'route_path': None,
@@ -235,6 +245,15 @@ def get_db_response(user_message, similar_question):
                                 }
                             }
                     else:
+                        # 템플릿 변수가 있는 경우 처리
+                        template_vars = response_data.get('template_variables', {})
+                        if template_vars:
+                            response_text = response_data['response']
+                            for var_name, var_value in template_vars.items():
+                                response_text = response_text.replace(f'{{{var_name}}}', str(var_value))
+                            response_data = dict(response_data)
+                            response_data['response'] = response_text
+                        
                         response = {
                             'status': 'success',
                             'data': {
@@ -273,7 +292,7 @@ def get_db_response(user_message, similar_question):
             }
         }
         similar_question = {'intent_tag': None}
-    return response, similar_question 
+    return response, similar_question
 
 def get_ai_response(user_message, similar_question, find_similar_question_func):
     """DB 기반 답변 우선, 없으면 LLM 생성 답변을 반환"""

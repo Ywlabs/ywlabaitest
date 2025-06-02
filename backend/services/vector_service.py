@@ -102,7 +102,31 @@ def find_similar_question(question_vector, top_k=1):
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            # 1. 먼저 patterns 테이블에서 키워드 매핑 정보를 가져옴
             cursor.execute('''
+                SELECT DISTINCT intent_tag, pattern
+                FROM patterns
+                WHERE is_active = 1
+                ORDER BY priority DESC
+            ''')
+            intent_patterns = {}
+            for row in cursor.fetchall():
+                if row['intent_tag'] not in intent_patterns:
+                    intent_patterns[row['intent_tag']] = []
+                intent_patterns[row['intent_tag']].append(row['pattern'])
+            
+            # 2. 키워드 기반 필터링 조건 생성
+            keyword_filter = ""
+            for intent_tag, patterns in intent_patterns.items():
+                for pattern in patterns:
+                    if pattern in question_vector:
+                        keyword_filter = f"OR p.intent_tag = '{intent_tag}'"
+                        break
+                if keyword_filter:
+                    break
+            
+            # 3. 벡터 데이터 조회
+            cursor.execute(f'''
                 SELECT 
                     vs.pattern_id,
                     vs.pattern_text,
@@ -119,6 +143,7 @@ def find_similar_question(question_vector, top_k=1):
                 WHERE vs.vector_status = 'completed'
                 AND p.is_active = 1
                 AND r.is_active = 1
+                {keyword_filter}
             ''')
             results = cursor.fetchall()
             
@@ -140,6 +165,14 @@ def find_similar_question(question_vector, top_k=1):
                 # 우선순위가 높은 패턴의 경우 유사도 보정
                 if result['priority'] > 0:
                     similarity = similarity * (1 + (result['priority'] / 100))
+                
+                # 패턴 매칭 보너스
+                intent_tag = result['intent_tag']
+                if intent_tag in intent_patterns:
+                    for pattern in intent_patterns[intent_tag]:
+                        if pattern in question_vector:
+                            similarity = similarity * 1.2
+                            break
                 
                 if similarity > max_similarity:
                     max_similarity = similarity
