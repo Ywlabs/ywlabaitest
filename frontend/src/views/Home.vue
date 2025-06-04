@@ -29,34 +29,32 @@
                 <span class="dot"></span>
               </span>
             </div>
-            <div v-for="(message, index) in messages" :key="index" 
-                 :class="['message', message.type === 'user' ? 'user-message' : 'ai-message']">
+            <div v-for="(msg, idx) in messages" :key="idx" :class="[msg.type === 'user' ? 'user-message' : 'ai-message']">
               <div class="message-content">
-                <template v-if="message.employee">
-                  <table class="employee-info-table">
-                    <tbody>
-                      <tr><th>이름</th><td>{{ message.employee.name }}</td></tr>
-                      <tr><th>직책</th><td>{{ message.employee.position }}</td></tr>
-                      <tr><th>부서</th><td>{{ message.employee.dept_nm }}</td></tr>
-                      <tr><th>이메일</th><td>{{ message.employee.email }}</td></tr>
-                      <tr><th>연락처</th><td>{{ message.employee.phone }}</td></tr>
-                    </tbody>
+                <!-- AI 메시지이면서 직원 정보가 구조화되어 있으면 표로 출력 -->
+                <template v-if="msg.type === 'ai' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
+                  <table class="employee-table">
+                    <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
+                    <tr><th>직책</th><td>{{ msg.response_json.data.employee.position }}</td></tr>
+                    <tr><th>부서</th><td>{{ msg.response_json.data.employee.dept_nm }}</td></tr>
+                    <tr><th>이메일</th><td>{{ msg.response_json.data.employee.email }}</td></tr>
+                    <tr><th>연락처</th><td>{{ msg.response_json.data.employee.phone }}</td></tr>
                   </table>
                 </template>
+                <!-- 그 외에는 기존 텍스트 출력 -->
                 <template v-else>
-                  <div v-html="formatMessage(message.content)"></div>
+                  <span v-html="formatMessage(msg.content)"></span>
                 </template>
-                <!-- widget 유형이면 버튼 표시 -->
-                <button v-if="message.type === 'ai' && message.route_type === 'widget' && message.route_code"
-                        @click="showWidget(message.route_code)"
+                <!-- route_code가 있으면 getRouteInfo로 route_type 분기 -->
+                <button v-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'widget'"
+                        @click="showWidget(msg.route_code)"
                         class="action-button">
-                  {{ message.route_name || '위젯 열기' }}
+                  {{ getRouteInfo(msg.route_code)?.route_name || '위젯 열기' }}
                 </button>
-                <!-- link 유형이면 버튼 표시 -->
-                <button v-else-if="message.type === 'ai' && message.route_type === 'link' && message.route_path"
-                        @click="navigateTo(message.route_path)"
+                <button v-else-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'link'"
+                        @click="navigateTo(getRouteInfo(msg.route_code)?.route_path)"
                         class="action-button">
-                  {{ message.route_name || '자세히 보기' }}
+                  {{ getRouteInfo(msg.route_code)?.route_name || '자세히 보기' }}
                 </button>
               </div>
             </div>
@@ -102,6 +100,11 @@ import { markRaw } from 'vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
 
+const widgetMap = {
+  ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
+  // 앞으로 추가될 위젯은 Widget 네이밍 사용
+}
+
 // axios 인스턴스 생성
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -111,11 +114,6 @@ const api = axios.create({
   },
   withCredentials: true // CORS 요청에 credentials 포함
 });
-
-const widgetMap = {
-  ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
-  // 앞으로 추가될 위젯은 Widget 네이밍 사용
-}
 
 export default {
   name: 'Home',
@@ -144,9 +142,11 @@ export default {
       activeWidgetCode: null,
       activeWidgetComponent: null,
       activeWidgetKey: 0,
+      routeList: [] // routes 정보를 저장
     }
   },
   async created() {
+    await this.loadRoutes() // 앱 로딩 시 routes 정보 먼저 가져옴
     await this.loadChatHistory()
     this.fetchPopularQuestions()
   },
@@ -162,13 +162,28 @@ export default {
     clearInterval(this.cursorInterval);
   },
   methods: {
+    // routes 정보를 API로 받아와 저장
+    async loadRoutes() {
+      try {
+        const res = await api.get('/api/routes')
+        if (res.data && res.data.status === 'success') {
+          this.routeList = res.data.data
+        }
+      } catch (e) {
+        this.routeList = []
+      }
+    },
+    // route_code로 route 정보 조회
+    getRouteInfo(route_code) {
+      return this.routeList.find(r => r.route_code === route_code)
+    },
     async loadChatHistory() {
       try {
         const response = await api.get('/api/chat/history')
         if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
           // 최신순으로 정렬
           const history = [...response.data.data].reverse();
-          // 각 item마다 [질문, 답변] 순서로 메시지 추가
+          // 각 item마다 [질문, 답변] 순서로 메시지 추가 (response_json 포함)
           const formattedHistory = history.map(item => [
             { type: 'user', content: item.user_message },
             { 
@@ -177,7 +192,8 @@ export default {
               route_code: item.route_code,
               route_type: item.route_type,
               route_name: item.route_name,
-              route_path: item.route_path
+              route_path: item.route_path,
+              response_json: item.response_json // 구조화 응답 포함
             }
           ]).flat();
           this.messages = formattedHistory;
@@ -218,12 +234,11 @@ export default {
           this.messages.push({
             type: 'ai',
             content: data.response,
-            employee: data.employee,
-            response_type: data.response_type,
             route_code: data.route_code,
             route_type: data.route_type,
             route_name: data.route_name,
-            route_path: data.route_path
+            route_path: data.route_path,
+            response_json: { data } // 구조화 응답 포함
           })
         }
         this.fetchPopularQuestions()
@@ -297,6 +312,134 @@ export default {
 </script>
 
 <style scoped>
+/* ===== 기존 스타일 백업 (아래 새 스타일 적용, 이상하면 이 부분 복원) =====
+기존 스타일 전체는 이 주석 안에 있습니다. 필요시 복원하세요.
+*/
+
+.message {
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 질문(오른쪽, 파란 말풍선) */
+.user-message {
+  align-items: flex-end;
+}
+.user-message .message-content {
+  background: linear-gradient(135deg, #4f8cff 0%, #2355d6 100%);
+  color: #fff;
+  border-radius: 18px 18px 4px 18px;
+  margin-left: 25%;
+  max-width: 70%;
+  padding: 16px 22px;
+  font-size: 1.05em;
+  box-shadow: 0 4px 16px rgba(79,140,255,0.08);
+  position: relative;
+  word-break: break-word;
+  transition: background 0.2s;
+}
+
+/* 답변(왼쪽, 흰색 말풍선+그림자) */
+.ai-message {
+  align-items: flex-start;
+}
+.ai-message .message-content {
+  background: #fff;
+  color: #222;
+  border-radius: 18px 18px 18px 4px;
+  margin-right: 25%;
+  max-width: 70%;
+  padding: 16px 22px;
+  font-size: 1.05em;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  position: relative;
+  word-break: break-word;
+  border: 1px solid #e6eaf1;
+  transition: background 0.2s;
+}
+
+/* 말풍선 꼬리(선택, 더 세련되게 하고 싶을 때) */
+.user-message .message-content::after {
+  content: '';
+  position: absolute;
+  right: -12px; bottom: 12px;
+  border-width: 8px 0 8px 12px;
+  border-style: solid;
+  border-color: transparent transparent transparent #4f8cff;
+  filter: drop-shadow(0 2px 2px rgba(79,140,255,0.08));
+}
+.ai-message .message-content::after {
+  content: '';
+  position: absolute;
+  left: -12px; bottom: 12px;
+  border-width: 8px 12px 8px 0;
+  border-style: solid;
+  border-color: transparent #fff transparent transparent;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.08));
+}
+
+/* 표(직원 정보)는 카드 느낌 */
+.employee-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 12px 0 8px 0;
+  background: #f7faff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.07);
+  overflow: hidden;
+}
+.employee-table th {
+  background: #e6eaf1;
+  text-align: left;
+  padding: 8px 14px;
+  font-weight: 600;
+  color: #2355d6;
+  width: 90px;
+  border-bottom: 1px solid #e6eaf1;
+}
+.employee-table td {
+  background: #f7faff;
+  padding: 8px 14px;
+  color: #222;
+  border-bottom: 1px solid #e6eaf1;
+}
+.employee-table tr:last-child th,
+.employee-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* 버튼(더 둥글고 컬러풀하게) */
+.action-button {
+  margin-top: 18px;
+  padding: 10px 24px;
+  background: linear-gradient(90deg, #4f8cff 0%, #2355d6 100%);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.10);
+  transition: background 0.2s, box-shadow 0.2s;
+  display: block;
+  width: auto;
+}
+.action-button:hover {
+  background: linear-gradient(90deg, #2355d6 0%, #4f8cff 100%);
+  box-shadow: 0 4px 16px rgba(79,140,255,0.15);
+}
+.action-button + .action-button {
+  margin-top: 10px;
+}
+
+/* 질문-답변 쌍 사이 간격 */
+.user-message + .ai-message,
+.ai-message + .user-message {
+  margin-top: 40px;
+}
+
 .home {
   width: 100%;
   min-height: 100vh;
@@ -371,6 +514,51 @@ export default {
   box-sizing: border-box;
 }
 
+.user-message {
+  align-items: flex-end;
+}
+.user-message .message-content {
+  background: #007bff;
+  color: white;
+  border-radius: 15px 15px 2px 15px;
+  margin-left: 30%;
+  max-width: 70%;
+  padding: 12px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-size: 0.98em;
+}
+
+.ai-message {
+  align-items: flex-start;
+}
+.ai-message .message-content {
+  background: #f8f9fa;
+  color: #333;
+  border-radius: 15px 15px 15px 2px;
+  margin-right: 30%;
+  max-width: 70%;
+  padding: 12px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  font-size: 0.98em;
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 8px 0;
+}
+.employee-table th {
+  background: #f0f0f0;
+  text-align: left;
+  padding: 4px 8px;
+  font-weight: bold;
+  width: 80px;
+}
+.employee-table td {
+  background: #fff;
+  padding: 4px 8px;
+}
+
 .company-info {
   text-align: center;
   padding: 20px;
@@ -399,39 +587,6 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  font-size: 0.92em;
-}
-
-.message {
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.user-message {
-  align-items: flex-end;
-}
-
-.user-message .message-content {
-  background: #007bff;
-  color: white;
-}
-
-.ai-message {
-  align-items: flex-start;
-}
-
-.ai-message .message-content {
-  background: #f8f9fa;
-  color: #333;
-}
-
-.message-content {
-  max-width: 80%;
-  padding: 12px 16px;
-  border-radius: 15px;
-  background: #f0f0f0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   font-size: 0.92em;
 }
 
@@ -481,10 +636,20 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
+  display: block;
+  width: auto;
 }
 
 .action-button:hover {
   background: #218838;
+}
+
+.ai-message .action-button {
+  margin-top: 16px;
+}
+
+.action-button + .action-button {
+  margin-top: 8px;
 }
 
 .popular-questions {
@@ -630,5 +795,14 @@ export default {
   .chat-container {
     height: 50vh;
   }
+}
+
+/* 질문과 답변(즉, user-message와 ai-message) 사이의 간격을 넓게 */
+.user-message + .ai-message {
+  margin-top: 32px;
+}
+/* 답변 다음에 새로운 질문이 시작될 때도 간격을 넓게 */
+.ai-message + .user-message {
+  margin-top: 40px;
 }
 </style> 

@@ -44,7 +44,8 @@ INSERT INTO `intents` (tag, description) VALUES
 ('vision','비전과 미션'),
 ('location','오시는 길'),
 ('contact','문의하기'),
-('employee_info','직원 정보');
+('employee_info','직원 정보'),
+('esg_info','ESG 정보');
 UNLOCK TABLES;
 
 --
@@ -59,13 +60,13 @@ CREATE TABLE `patterns` (
   `pattern_type` varchar(20) NOT NULL DEFAULT 'static' COMMENT '패턴 유형 (static/dynamic)',
   `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '활성화 여부',
   `priority` int NOT NULL DEFAULT 0 COMMENT '우선순위',
+  `response_id` int DEFAULT NULL COMMENT '연결된 응답 ID',
   `description` varchar(255) DEFAULT NULL COMMENT '패턴 설명',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
   PRIMARY KEY (`id`),
   KEY `intent_tag` (`intent_tag`),
-  KEY `idx_pattern_type` (`pattern_type`),
-  KEY `idx_is_active` (`is_active`)
+  KEY `response_id` (`response_id`)
 ) ENGINE=InnoDB COMMENT='패턴 매칭 테이블';
 
 --
@@ -73,52 +74,20 @@ CREATE TABLE `patterns` (
 --
 
 LOCK TABLES `patterns` WRITE;
-INSERT INTO `patterns` (pattern, intent_tag, pattern_type, priority, description) VALUES 
-('안녕하세요','greeting', 'static', 0, '기본 인사 패턴'),
-('안녕','greeting', 'static', 0, '간단한 인사 패턴'),
-('반갑습니다','greeting', 'static', 0, '정중한 인사 패턴'),
-('조직도','organization', 'static', 0, '조직도 조회 패턴'),
-('조직 구조','organization', 'static', 0, '조직 구조 조회 패턴'),
-('부서 구조','organization', 'static', 0, '부서 구조 조회 패턴'),
-('영우랩스 조직도','organization', 'static', 10, '영우랩스 조직도 조회 패턴'),
-('영우랩스 조직','organization', 'static', 10, '영우랩스 조직 조회 패턴'),
-('영우랩스 조직정보','organization', 'static', 10, '영우랩스 조직정보 조회 패턴'),
-('영우랩스 조직도 보여줘','organization', 'static', 10, '영우랩스 조직도 조회 패턴'),
-('영우랩스 조직도 확인','organization', 'static', 10, '영우랩스 조직도 조회 패턴'),
-('영우랩스 조직도 알려줘','organization', 'static', 10, '영우랩스 조직도 조회 패턴'),
-('휴가','vacation', 'static', 0, '휴가 조회 패턴'),
-('연차','vacation', 'static', 0, '연차 조회 패턴'),
-('반차','vacation', 'static', 0, '반차 조회 패턴'),
-('ESG','esg', 'static', 0, 'ESG 조회 패턴'),
-('환경','esg', 'static', 0, '환경 관련 조회 패턴'),
-('사회','esg', 'static', 0, '사회 관련 조회 패턴'),
-('지배구조','esg', 'static', 0, '지배구조 조회 패턴'),
-('준법','compliance', 'static', 0, '준법 조회 패턴'),
-('윤리','compliance', 'static', 0, '윤리 조회 패턴'),
-('회사 소개','about', 'static', 20, '회사 소개 명확 패턴'),
-('회사 연혁','history', 'static', 0, '회사 연혁 조회 패턴'),
-('비전','vision', 'static', 0, '비전 조회 패턴'),
-('미션','vision', 'static', 0, '미션 조회 패턴'),
-('오시는 길','location', 'static', 0, '오시는 길 조회 패턴'),
-('위치','location', 'static', 0, '위치 조회 패턴'),
-('문의','contact', 'static', 0, '문의 조회 패턴'),
-('연락처','contact', 'static', 0, '연락처 조회 패턴'),
-('영우랩스 {name} 정보','employee_info', 'dynamic', 10, '직원 정보 조회 패턴 (회사명 포함)'),
-('{name} 정보', 'employee_info', 'dynamic', 2, '직원 정보 조회 패턴 (이름만)'),
-('{name} 알려줘', 'employee_info', 'dynamic', 2, '직원 정보 조회 패턴 (이름만)'),
-('영우랩스 조정현','employee_info', 'static', 20, '조정현 대표 정보 조회 패턴'),
-('조정현 대표','employee_info', 'static', 20, '조정현 대표 정보 조회 패턴'),
-('조정현 이사','employee_info', 'static', 20, '조정현 대표 정보 조회 패턴'),
-('조정현님','employee_info', 'static', 20, '조정현 대표 정보 조회 패턴'),
-('ESG 경영정보', 'esg_info', 1),
-('ESG 안내', 'esg_info', 1),
-('영우랩스의 ESG 경영정보를 알고 싶어요', 'esg_info', 1),
-('ESG 경영이 뭐야?', 'esg_info', 1),
-('ESG 정보 알려줘', 'esg_info', 1),
-('회사소개', 'about', 'static', 20, '회사 소개 명확 패턴'),
-('회사 소개', 'about', 'static', 20, '회사 소개 명확 패턴'),
-('회사소개 알려줘', 'about', 'static', 20, '회사 소개 명확 패턴'),
-('회사 소개 알려줘', 'about', 'static', 20, '회사 소개 명확 패턴');
+INSERT INTO `patterns` (pattern, intent_tag, pattern_type, priority, response_id, description) VALUES 
+('안녕하세요','greeting', 'static', 0, 1, '기본 인사 패턴'),
+('조직도','organization', 'static', 0, 2, '조직도 조회 패턴'),
+('휴가','vacation', 'static', 0, 3, '휴가 조회 패턴'),
+('ESG','esg', 'static', 0, 4, 'ESG 조회 패턴'),
+('준법','compliance', 'static', 0, 5, '준법 조회 패턴'),
+('회사 소개','about', 'static', 20, 6, '회사 소개 명확 패턴'),
+('회사 연혁','history', 'static', 0, 7, '회사 연혁 조회 패턴'),
+('비전','vision', 'static', 0, 8, '비전 조회 패턴'),
+('오시는 길','location', 'static', 0, 9, '오시는 길 조회 패턴'),
+('문의','contact', 'static', 0, 10, '문의 조회 패턴'),
+('영우랩스 {name} 정보','employee_info', 'dynamic', 10, 11, '직원 정보 조회 패턴 (회사명 포함)'),
+('{name} 정보', 'employee_info', 'dynamic', 2, 11, '직원 정보 조회 패턴 (이름만)'),
+('ESG 경영정보', 'esg_info', 'static', 0, 12, 'ESG 경영 정보 패턴');
 UNLOCK TABLES;
 
 --
@@ -130,18 +99,17 @@ CREATE TABLE `responses` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '응답 ID',
   `intent_tag` varchar(50) NOT NULL COMMENT '연관된 인텐트 태그',
   `response` text NOT NULL COMMENT '응답 텍스트',
-  `response_type` varchar(20) NOT NULL DEFAULT 'text' COMMENT '응답 유형 (text/dynamic)',
+  `response_type` varchar(20) NOT NULL DEFAULT 'text' COMMENT '응답 데이터 유형 (text: 일반 텍스트, dynamic: 동적 텍스트 등, UI 유형은 route_code로 분기)',
+  `template_variables` text DEFAULT NULL COMMENT '동적응답 변수',
   `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '활성화 여부',
   `priority` int NOT NULL DEFAULT 0 COMMENT '우선순위',
   `description` varchar(255) DEFAULT NULL COMMENT '응답 설명',
-  `route_code` varchar(20) COMMENT '연관된 라우트 코드',
+  `route_code` varchar(20) DEFAULT NULL COMMENT '연관된 라우트 코드',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
   PRIMARY KEY (`id`),
   KEY `intent_tag` (`intent_tag`),
-  KEY `route_code` (`route_code`),
-  KEY `idx_response_type` (`response_type`),
-  KEY `idx_is_active` (`is_active`)
+  KEY `route_code` (`route_code`)
 ) ENGINE=InnoDB COMMENT='응답 템플릿 테이블';
 
 --
@@ -196,8 +164,11 @@ CREATE TABLE `chat_history` (
   `ai_response` text NOT NULL COMMENT 'AI 응답',
   `intent_tag` varchar(50) DEFAULT NULL COMMENT '인식된 인텐트 태그',
   `route_code` varchar(20) DEFAULT NULL COMMENT '연관된 라우트 코드',
+  `response_source` varchar(20) NOT NULL DEFAULT 'db' COMMENT '응답 소스 (db/gpt/hybrid)',
+  `response_time` float DEFAULT NULL COMMENT '응답 생성 소요 시간(초)',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+  `response_json` json DEFAULT NULL COMMENT 'AI 응답 전체 JSON',
   PRIMARY KEY (`id`),
   KEY `idx_intent_tag` (`intent_tag`),
   KEY `idx_route_code` (`route_code`),
@@ -267,7 +238,7 @@ CREATE TABLE `routes` (
   `route_code` varchar(20) NOT NULL COMMENT '라우트 코드',
   `route_name` varchar(100) NOT NULL COMMENT '라우트 이름',
   `route_path` varchar(200) NOT NULL COMMENT '라우트 경로',
-  `route_type` varchar(20) NOT NULL COMMENT '라우트 유형 (widget/link)',
+  `route_type` varchar(20) NOT NULL COMMENT '라우트 유형 (widget: 위젯, link: 링크, button: 버튼 등 UI 유형)',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
   PRIMARY KEY (`route_code`)
@@ -287,15 +258,7 @@ INSERT INTO `routes` (route_code, route_name, route_path, route_type) VALUES
 ('HISTORY', '회사 연혁', '/history', 'link'),
 ('VISION', '비전과 미션', '/vision', 'link'),
 ('LOCATION', '오시는 길', '/location', 'link'),
-('CONTACT', '문의하기', '/contact', 'link'),
-('COMP_INTRO', '회사 소개', '/company/intro', 'link'),
-('COMP_HIST', '회사 연혁', '/company/history', 'link'),
-('COMP_VSN', '비전과 미션', '/company/vision', 'link'),
-('COMP_LOC', '오시는 길', '/company/location', 'link'),
-('COMP_CNT', '문의하기', '/company/contact', 'link'),
-('COMP_ESG', 'ESG 경영', '/company/esg', 'link'),
-('COMP_CMP', '준법경영', '/company/compliance', 'link'),
-('ESG_INFO', 'ESG 안내', '/esg/info', 'widget');
+('CONTACT', '문의하기', '/contact', 'link');
 UNLOCK TABLES;
 
 --
@@ -305,7 +268,8 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `search_logs`;
 CREATE TABLE `search_logs` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '로그 ID',
-  `query` text NOT NULL COMMENT '검색 키워드',
+  `query` text NOT NULL COMMENT '검색 쿼리',
+  `results` text NOT NULL COMMENT '검색 결과',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='검색 로그 테이블';

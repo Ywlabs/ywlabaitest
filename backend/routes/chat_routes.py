@@ -5,12 +5,16 @@ from common.logger import setup_logger
 from database import get_db_connection
 import re
 from services.employee_service import extract_employee_name, get_employee_info_and_fill_template
+from flask import current_app
 
 
-chat_bp = Blueprint('chat', __name__)
+chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 logger = setup_logger('chat_routes')
 
-@chat_bp.route('/api/chat', methods=['POST'])
+routes_bp = Blueprint('routes', __name__, url_prefix='/api')
+
+@chat_bp.route('', methods=['POST'], strict_slashes=False)
+@chat_bp.route('/', methods=['POST'], strict_slashes=False)
 def chat():
     """채팅 메시지 처리"""
     try:
@@ -40,7 +44,10 @@ def chat():
             user_message,
             response['data']['response'],
             similar_question['intent_tag'],
-            response['data']['route_code']
+            response['data']['route_code'],
+            response.get('data', {}).get('response_type', 'db'),  # response_source
+            response.get('data', {}).get('response_time', None),  # response_time
+            response  # 전체 응답 JSON 저장
         )
         
         return jsonify(response)
@@ -52,7 +59,7 @@ def chat():
             'message': f'서버 오류가 발생했습니다. (에러: {str(e)})'
         }), 500
 
-@chat_bp.route('/api/chat/history', methods=['GET'])
+@chat_bp.route('/history', methods=['GET'])
 def chat_history():
     """채팅 히스토리 조회"""
     try:
@@ -70,8 +77,20 @@ def chat_history():
             'message': f'채팅 히스토리를 불러오는데 실패했습니다. (에러: {str(e)})'
         }), 500
 
-@chat_bp.route('/api/chat/popular', methods=['GET'])
+@chat_bp.route('/popular', methods=['GET'])
 def popular_questions():
     """인기 질문 목록 조회"""
     questions = get_popular_questions()
-    return jsonify(questions) 
+    return jsonify(questions)
+
+@routes_bp.route('/routes', methods=['GET'])
+def get_routes():
+    """routes 테이블 전체 정보 반환"""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('SELECT route_code, route_type, route_name, route_path FROM routes')
+            routes = cursor.fetchall()
+        return jsonify({'status': 'success', 'data': routes})
+    finally:
+        conn.close() 

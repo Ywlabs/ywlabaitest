@@ -52,6 +52,9 @@ class VectorStore:
 
     def _normalize_text(self, text):
         """텍스트 정규화"""
+        # 문자열이 아니면 빈 문자열 반환
+        if not isinstance(text, str):
+            return ""
         # 소문자 변환 및 특수문자 제거
         text = text.lower()
         text = re.sub(r'[^\w\s]', '', text)
@@ -64,27 +67,24 @@ class VectorStore:
         return pattern in text
 
     def load_metadata(self):
-        """메타데이터 로드"""
+        """메타데이터 로드 (최신 DB 구조 반영)"""
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
-                # patterns와 responses 조인하여 메타데이터 가져오기
+                # patterns와 responses를 response_id로 1:1 조인
                 cursor.execute('''
                     SELECT p.id as pattern_id, p.pattern as pattern_text, 
                            r.response, r.route_code,
                            p.pattern_type, p.is_active,
                            r.response_type, r.is_active as response_active
                     FROM patterns p
-                    JOIN responses r ON p.intent_tag = r.intent_tag
+                    JOIN responses r ON p.response_id = r.id
                     LEFT JOIN vector_store vs ON p.id = vs.pattern_id
                     WHERE p.is_active = 1 AND r.is_active = 1
                 ''')
                 data = cursor.fetchall()
-                
-                # 메타데이터 저장
                 self.metadata.clear()
                 self.vector_status.clear()
-                
                 for item in data:
                     pattern_id = item['pattern_id']
                     self.metadata[pattern_id] = {
@@ -95,7 +95,6 @@ class VectorStore:
                         'response_type': item['response_type']
                     }
                     self.vector_status[pattern_id] = item.get('vector_status', 'pending')
-                
                 logger.info(f"메타데이터 로드 완료: {len(self.metadata)}개 패턴")
                 return len(self.metadata)
         finally:
@@ -134,6 +133,10 @@ class VectorStore:
 
 def find_similar_question(question_vector, top_k=1):
     """질문 벡터와 가장 유사한 벡터 찾기 (DB 기반)"""
+    # 벡터 타입 체크: 리스트 또는 np.ndarray가 아니면 에러 반환
+    if not isinstance(question_vector, (list, np.ndarray)):
+        logger.error(f"find_similar_question: question_vector 타입 오류: {type(question_vector)}, 값: {question_vector}")
+        return None
     start_time = time.time()
     
     # NumPy 배열을 Python 리스트로 변환

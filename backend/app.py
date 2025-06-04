@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from routes.chat_routes import chat_bp
+from routes.chat_routes import chat_bp, routes_bp
 from routes.vector_routes import vector_bp
 from routes.employee_routes import employee_bp
 from services.vector_service import initialize_vector_store, validate_vector_store
@@ -12,25 +12,25 @@ logger = setup_logger('app')
 
 def create_app():
     app = Flask(__name__)
+    # CORS는 app 단위로만 적용 (Blueprint에는 적용하지 않음)
     CORS(app, resources={
         r"/api/*": {
             "origins": [
-                "http://localhost:5173", 
+                "http://localhost:5173",
                 "http://127.0.0.1:5173",
-                "http://192.168.0.84:5173",
-                "http://localhost:3000",      # 추가
-                "http://127.0.0.1:3000"       # 추가
+                "http://localhost:3000",
+                "http://127.0.0.1:3000"
             ],
             "methods": ["GET", "POST", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
         }
     })
-    
     # 블루프린트 등록
     app.register_blueprint(chat_bp)
     app.register_blueprint(vector_bp)
     app.register_blueprint(employee_bp)
+    app.register_blueprint(routes_bp)  # routes API 블루프린트 등록
     
     return app
 
