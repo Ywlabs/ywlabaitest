@@ -3,11 +3,15 @@
     <div class="env-header">
       <span class="env-title">오늘의 회사 환경정보</span>
       <button class="refresh-btn" @click="fetchWeatherAndAir" :disabled="loading" title="새로고침">
-        <span v-if="loading" class="refresh-spin">🔄</span>
-        <span v-else>🔄</span>
+        <svg class="refresh-icon" :class="{ spinning: loading }" viewBox="0 0 24 24" width="22" height="22">
+          <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="#2355d6"/>
+        </svg>
       </button>
     </div>
-    <div v-if="loading" class="env-loading">정보를 불러오는 중...</div>
+    <div v-if="loading" class="env-loading">
+      <span class="spinner"></span>
+      정보 불러오는 중...
+    </div>
     <div v-else-if="error" class="env-error">{{ error }}</div>
     <div v-else :class="['weather-info', { 'loading-anim': loading }]">
       <div class="weather-main">
@@ -118,6 +122,7 @@ export default {
       return 'aqi-good'
     },
     async fetchWeatherAndAir() {
+      this.loading = true; // 클릭 시 즉시 로딩 시작
       try {
         // 1. 백엔드에서 날씨 정보 받아오기
         const weatherRes = await api.get('/api/legacy/weather')
@@ -187,20 +192,28 @@ export default {
   font-size: 1.2em;
   color: #2355d6;
   cursor: pointer;
-  padding: 2px 8px;
+  padding: 2px 2px 2px 8px;
   border-radius: 50%;
   transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .refresh-btn:disabled {
   color: #bbb;
   cursor: not-allowed;
 }
-.refresh-spin {
-  display: inline-block;
+.refresh-icon {
+  transition: transform 0.2s;
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.spinning {
   animation: spin 1s linear infinite;
 }
 @keyframes spin {
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 .env-loading, .env-error {
   color: #d32f2f;
@@ -268,5 +281,28 @@ export default {
   opacity: 0.5;
   filter: blur(2px);
   pointer-events: none;
+}
+.env-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333; /* 진한 회색 */
+  font-weight: 500;
+  font-size: 1.05em;
+  margin: 18px 0 16px 0;
+  min-height: 32px;
+  gap: 10px;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #42b983;
+  border-top: 3px solid #e0e0e0;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style> 
