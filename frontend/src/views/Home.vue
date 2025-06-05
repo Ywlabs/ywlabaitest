@@ -1,17 +1,36 @@
 <template>
   <div class="home">
+    <AnimationBackground />
     <div class="layout-container">
       <!-- Left Column (30%) -->
       <div class="left-column">
         <div class="widget-container">
           <div class="widget top-widget">
-            <TodayVacation />
+            <EnvironmentWidget />
           </div>
           <div class="widget bottom-widget">
-            <component v-if="activeWidgetComponent" :is="activeWidgetComponent" :key="activeWidgetKey" />
-            <div v-else class="empty-widget-message">
-              위젯을 선택하면 이 영역에 표시됩니다.
-            </div>
+            <transition name="fade-widget" mode="out-in">
+              <component
+                v-if="activeWidgetComponent"
+                :is="activeWidgetComponent"
+                v-bind="activeWidgetProps"
+                :key="activeWidgetKey"
+                @close="activeWidgetComponent = null"
+              />
+              <div v-else class="empty-widget-message">
+                <lottie-player
+                  src="/assets/json/ai-animation.json"
+                  background="transparent"
+                  speed="1"
+                  style="width: 120px; height: 120px;"
+                  loop
+                  autoplay
+                ></lottie-player>
+                <div class="ai-empty-text">
+                  <span>AI 위젯 준비중입니다.</span>
+                </div>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
@@ -20,25 +39,18 @@
       <div class="center-column">
         <div class="chat-container" ref="chatContainer">
           <div class="chat-messages" ref="chatMessages">
-            <div class="ai-guide-banner">
-              <span class="ai-icon">🤖</span>
-              <span>영우랩스 AI가 동작중입니다. 궁금하신사항을 물어 보세요</span>
-              <span class="ai-typing">
-                <span class="dot"></span>
-                <span class="dot"></span>
-                <span class="dot"></span>
-              </span>
-            </div>
             <div v-for="(msg, idx) in messages" :key="idx" :class="[msg.type === 'user' ? 'user-message' : 'ai-message']">
               <div class="message-content">
                 <!-- AI 메시지이면서 직원 정보가 구조화되어 있으면 표로 출력 -->
                 <template v-if="msg.type === 'ai' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
                   <table class="employee-table">
-                    <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
-                    <tr><th>직책</th><td>{{ msg.response_json.data.employee.position }}</td></tr>
-                    <tr><th>부서</th><td>{{ msg.response_json.data.employee.dept_nm }}</td></tr>
-                    <tr><th>이메일</th><td>{{ msg.response_json.data.employee.email }}</td></tr>
-                    <tr><th>연락처</th><td>{{ msg.response_json.data.employee.phone }}</td></tr>
+                    <tbody>
+                      <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
+                      <tr><th>직책</th><td>{{ msg.response_json.data.employee.position }}</td></tr>
+                      <tr><th>부서</th><td>{{ msg.response_json.data.employee.dept_nm }}</td></tr>
+                      <tr><th>이메일</th><td>{{ msg.response_json.data.employee.email }}</td></tr>
+                      <tr><th>연락처</th><td>{{ msg.response_json.data.employee.phone }}</td></tr>
+                    </tbody>
                   </table>
                 </template>
                 <!-- 그 외에는 기존 텍스트 출력 -->
@@ -47,7 +59,7 @@
                 </template>
                 <!-- route_code가 있으면 getRouteInfo로 route_type 분기 -->
                 <button v-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'widget'"
-                        @click="showWidget(msg.route_code)"
+                        @click="showWidget(msg.route_code, msg)"
                         class="action-button">
                   {{ getRouteInfo(msg.route_code)?.route_name || '위젯 열기' }}
                 </button>
@@ -72,6 +84,15 @@
                    class="message-input">
             <button @click="sendMessage" class="send-button">전송</button>
           </div>
+          <div class="ai-guide-banner">
+            <span class="ai-icon">🤖</span>
+            <span>영우랩스 AI가 동작중입니다. 궁금하신사항을 물어 보세요</span>
+            <span class="ai-typing">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -92,9 +113,11 @@
 </template>
 
 <script>
+import AnimationBackground from '@/components/AnimationBackground.vue'
 import FloatingMenu from '@/components/FloatingMenu.vue'
-import TodayVacation from '@/components/TodayVacation.vue'
+import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
 import OrganizationChart from '@/components/OrganizationChart.vue'
+import SalesWidget from '@/widgets/SalesWidget.vue'
 import axios from 'axios'
 import { markRaw } from 'vue'
 
@@ -102,6 +125,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000
 
 const widgetMap = {
   ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
+  SALES_WIDGET: () => import('@/widgets/SalesWidget.vue'),
   // 앞으로 추가될 위젯은 Widget 네이밍 사용
 }
 
@@ -118,9 +142,11 @@ const api = axios.create({
 export default {
   name: 'Home',
   components: { 
+    AnimationBackground,
     FloatingMenu,
-    TodayVacation,
-    OrganizationChart
+    EnvironmentWidget,
+    OrganizationChart,
+    SalesWidget
   },
   data() {
     return {
@@ -142,7 +168,8 @@ export default {
       activeWidgetCode: null,
       activeWidgetComponent: null,
       activeWidgetKey: 0,
-      routeList: [] // routes 정보를 저장
+      routeList: [], // routes 정보를 저장
+      activeWidgetProps: {}
     }
   },
   async created() {
@@ -264,12 +291,18 @@ export default {
         .replace(/\s+/g, ' ') // 불필요한 공백 정리
         .replace(/\n/g, '<br>')
     },
-    async showWidget(route_code) {
+    async showWidget(route_code, msg = null) {
       if (widgetMap[route_code]) {
         const comp = (await widgetMap[route_code]()).default
+        // response_params를 위젯에 prop으로 그대로 전달 (범용)
+        let widgetProps = {}
+        if (msg && msg.response_json && msg.response_json.data && msg.response_json.data.response_params) {
+          widgetProps = { ...msg.response_json.data.response_params }
+        }
         this.activeWidgetComponent = markRaw(comp)
         this.activeWidgetCode = route_code
         this.activeWidgetKey += 1
+        this.activeWidgetProps = widgetProps
       }
     },
     navigateTo(path) {
@@ -329,7 +362,7 @@ export default {
 .user-message .message-content {
   background: linear-gradient(135deg, #4f8cff 0%, #2355d6 100%);
   color: #fff;
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 18px !important;
   margin-left: 25%;
   max-width: 70%;
   padding: 16px 22px;
@@ -347,7 +380,7 @@ export default {
 .ai-message .message-content {
   background: #fff;
   color: #222;
-  border-radius: 18px 18px 18px 4px;
+  border-radius: 18px !important;
   margin-right: 25%;
   max-width: 70%;
   padding: 16px 22px;
@@ -363,7 +396,8 @@ export default {
 .user-message .message-content::after {
   content: '';
   position: absolute;
-  right: -12px; bottom: 12px;
+  right: -12px;
+  bottom: 12px;
   border-width: 8px 0 8px 12px;
   border-style: solid;
   border-color: transparent transparent transparent #4f8cff;
@@ -372,7 +406,8 @@ export default {
 .ai-message .message-content::after {
   content: '';
   position: absolute;
-  left: -12px; bottom: 12px;
+  left: -12px;
+  bottom: 12px;
   border-width: 8px 12px 8px 0;
   border-style: solid;
   border-color: transparent #fff transparent transparent;
@@ -446,15 +481,19 @@ export default {
   padding: 20px;
   box-sizing: border-box;
   font-size: 0.9em;
+  position: relative; /* 배경 위에 오도록 */
+  z-index: 1;
+  overflow: hidden; /* 배경이 영역을 벗어나지 않게 */
 }
 
 .layout-container {
   display: flex;
   gap: 20px;
   max-width: 1400px;
-  margin: 0 auto;
+  margin: 32px auto 0 auto;
   height: calc(100vh - 40px);
   align-items: flex-start;
+  position: relative;
 }
 
 .left-column, .center-column, .right-column {
@@ -497,7 +536,7 @@ export default {
 }
 
 .center-column {
-  flex: 4;
+  flex: 3.5;
   display: flex;
   flex-direction: column;
   height: 80%;
@@ -505,7 +544,7 @@ export default {
 }
 
 .right-column {
-  flex: 3;
+  flex: 1.3;
   background: #f8f9fa;
   border-radius: 10px;
   padding: 20px;
@@ -732,10 +771,27 @@ export default {
 }
 
 .empty-widget-message {
-  color: #aaa;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #2355d6;
+  font-size: 1.15em;
   padding: 40px 0;
-  font-size: 1.1em;
+  min-height: 180px;
+  background: #f7faff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(79,140,255,0.07);
+}
+.ai-empty-text span {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-top: 12px;
+  animation: ai-glow 2s infinite alternate;
+}
+@keyframes ai-glow {
+  from { text-shadow: 0 0 8px #b3c6ff; }
+  to { text-shadow: 0 0 18px #2355d6; }
 }
 
 .ai-guide-banner {
@@ -746,16 +802,17 @@ export default {
   color: #007bff;
   font-weight: 500;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin: 4px 32px 8px 32px;
   padding: 10px 0;
-  font-size: 0.95em;
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  font-size: 0.97em;
+  width: auto;
+  min-height: 38px;
+  box-sizing: border-box;
 }
 .ai-icon {
   margin-right: 8px;
-  font-size: 1.3em;
+  font-size: 1.5em;
+  line-height: 1;
 }
 .ai-typing {
   margin-left: 10px;
@@ -804,5 +861,16 @@ export default {
 /* 답변 다음에 새로운 질문이 시작될 때도 간격을 넓게 */
 .ai-message + .user-message {
   margin-top: 40px;
+}
+
+/* ===== Fade-in, Fade-out 애니메이션 효과 (위젯용) ===== */
+.fade-widget-enter-active, .fade-widget-leave-active {
+  transition: opacity 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+.fade-widget-enter-from, .fade-widget-leave-to {
+  opacity: 0;
+}
+.fade-widget-enter-to, .fade-widget-leave-from {
+  opacity: 1;
 }
 </style> 

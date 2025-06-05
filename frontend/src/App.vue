@@ -2,7 +2,9 @@
   <div id="app">
     <nav class="navbar">
       <div class="nav-brand">
-        <router-link to="/" class="company-name">영우랩스</router-link>
+        <router-link to="/" class="company-logo">
+          <img src="/assets/img/logo.png" alt="영우랩스 로고" class="logo-img" />
+        </router-link>
       </div>
       <div class="nav-menu">
         <div class="menu-item" 
@@ -105,17 +107,14 @@ export default {
   gap: 10px;
 }
 
-.company-name {
-  font-size: 1.25em;
-  font-weight: bold;
-  color: #007bff;
+.company-logo {
+  display: flex;
+  align-items: center;
   text-decoration: none;
-  cursor: pointer;
-  letter-spacing: 0.02em;
-  transition: color 0.2s;
 }
-.company-name:hover {
-  color: #0056b3;
+.logo-img {
+  height: 36px;
+  vertical-align: middle;
 }
 
 .nav-menu {

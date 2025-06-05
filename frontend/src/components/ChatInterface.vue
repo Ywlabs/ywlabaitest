@@ -11,6 +11,7 @@
             </button>
           </div>
         </div>
+        
       </div>
     </div>
     <div class="chat-input">
@@ -28,16 +29,19 @@
 <script>
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import SalesWidget from '../widgets/SalesWidget.vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export default {
   name: 'ChatInterface',
+  components: { SalesWidget },
   setup() {
     const messages = ref([])
     const userInput = ref('')
     const messagesContainer = ref(null)
     const router = useRouter()
+    const openedSalesWidgets = ref([])
 
     const scrollToBottom = async () => {
       await nextTick()
@@ -52,10 +56,19 @@ export default {
       }
     }
 
+    const openSalesWidget = (idx) => {
+      if (!openedSalesWidgets.value.includes(idx)) {
+        openedSalesWidgets.value.push(idx)
+      }
+    }
+
+    const closeSalesWidget = (idx) => {
+      openedSalesWidgets.value = openedSalesWidgets.value.filter(i => i !== idx)
+    }
+
     const sendMessage = async () => {
       if (!userInput.value.trim()) return
 
-      // Add user message
       messages.value.push({
         type: 'user',
         content: userInput.value
@@ -75,15 +88,14 @@ export default {
 
         const data = await response.json()
 
-        // Add AI response
         messages.value.push({
           type: data.type === 'page_redirect' ? 'system' : 'ai',
           content: data.content,
           target_url: data.target_url,
-          button_text: data.button_text
+          button_text: data.button_text,
+          route_code: data.route_code
         })
 
-        // Handle page redirect
         if (data.type === 'page_redirect' && data.target_url) {
           setTimeout(() => {
             router.push(data.target_url)
@@ -112,7 +124,10 @@ export default {
       userInput,
       messagesContainer,
       sendMessage,
-      handleButtonAction
+      handleButtonAction,
+      openedSalesWidgets,
+      openSalesWidget,
+      closeSalesWidget
     }
   }
 }

@@ -1,5 +1,7 @@
 <template>
   <div class="org-chart-widget">
+    <!-- 닫기 버튼: 오른쪽 상단 고정 -->
+    <button class="close-btn" @click="$emit('close')" title="닫기">×</button>
     <h3>조직도</h3>
     <div v-if="loading" class="loading">불러오는 중...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
@@ -57,6 +59,25 @@ export default {
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   text-align: center;
+  position: relative; /* 닫기 버튼 위치를 위해 */
+}
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 1.3em;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 50%;
+  transition: background 0.15s, color 0.15s;
+  z-index: 2;
+}
+.close-btn:hover {
+  background: #e0e6ef;
+  color: #d32f2f;
 }
 .employee-list {
   list-style: none;

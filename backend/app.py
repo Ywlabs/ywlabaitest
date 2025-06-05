@@ -3,6 +3,8 @@ from flask_cors import CORS
 from routes.chat_routes import chat_bp, routes_bp
 from routes.vector_routes import vector_bp
 from routes.employee_routes import employee_bp
+from routes.legacy_routes import legacy_bp
+from routes.sales_routes import sales_bp  # 매출 API 블루프린트 추가
 from services.vector_service import initialize_vector_store, validate_vector_store
 from common.logger import setup_logger
 import threading
@@ -31,6 +33,8 @@ def create_app():
     app.register_blueprint(vector_bp)
     app.register_blueprint(employee_bp)
     app.register_blueprint(routes_bp)  # routes API 블루프린트 등록
+    app.register_blueprint(legacy_bp)  # legacy API 블루프린트 등록
+    app.register_blueprint(sales_bp)   # 매출 API 블루프린트 등록
     
     return app
 

@@ -45,7 +45,8 @@ INSERT INTO `intents` (tag, description) VALUES
 ('location','오시는 길'),
 ('contact','문의하기'),
 ('employee_info','직원 정보'),
-('esg_info','ESG 정보');
+('esg_info','ESG 정보'),
+('sales_status', '연도별 매출 현황 조회');
 UNLOCK TABLES;
 
 --
@@ -87,7 +88,13 @@ INSERT INTO `patterns` (pattern, intent_tag, pattern_type, priority, response_id
 ('문의','contact', 'static', 0, 10, '문의 조회 패턴'),
 ('영우랩스 {name} 정보','employee_info', 'dynamic', 10, 11, '직원 정보 조회 패턴 (회사명 포함)'),
 ('{name} 정보', 'employee_info', 'dynamic', 2, 11, '직원 정보 조회 패턴 (이름만)'),
-('ESG 경영정보', 'esg_info', 'static', 0, 12, 'ESG 경영 정보 패턴');
+('ESG 경영정보', 'esg_info', 'static', 0, 12, 'ESG 경영 정보 패턴'),
+('영우랩스 {year}년 매출', 'sales_status', 'dynamic', 10, NULL, '연도별 매출 동적 패턴'),
+('{year}년 매출', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
+('{year}년 매출 알려줘', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
+('{year}년 매출현황', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
+('올해 매출', 'sales_status', 'dynamic', 5, NULL, '올해 매출 동적 패턴'),
+('작년 매출', 'sales_status', 'dynamic', 5, NULL, '작년 매출 동적 패턴');
 UNLOCK TABLES;
 
 --
@@ -129,7 +136,8 @@ INSERT INTO `responses` (intent_tag, response, response_type, priority, descript
 ('location', '오시는 길 페이지로 이동하시겠습니까?', 'text', 0, '오시는 길 응답', 'LOCATION'),
 ('contact', '문의하기 페이지로 이동하시겠습니까?', 'text', 0, '문의하기 응답', 'CONTACT'),
 ('employee_info', '{employee.name}님의 정보입니다:\n직책: {employee.position}\n부서: {employee.dept_nm}\n이메일: {employee.email}\n연락처: {employee.phone}', 'dynamic', 0, '직원 정보 동적 응답', NULL),
-('esg_info', 'ESG 경영 정보를 안내해드릴까요?', 'text', 0, 'ESG 경영 정보 응답', 'ESG_INFO');
+('esg_info', 'ESG 경영 정보를 안내해드릴까요?', 'text', 0, 'ESG 경영 정보 응답', 'ESG_INFO'),
+('sales_status', '매출 위젯으로 이동합니다.', 'text', 0, '연도별 매출 위젯 응답', 'SALES_WIDGET');
 UNLOCK TABLES;
 
 --
@@ -258,7 +266,8 @@ INSERT INTO `routes` (route_code, route_name, route_path, route_type) VALUES
 ('HISTORY', '회사 연혁', '/history', 'link'),
 ('VISION', '비전과 미션', '/vision', 'link'),
 ('LOCATION', '오시는 길', '/location', 'link'),
-('CONTACT', '문의하기', '/contact', 'link');
+('CONTACT', '문의하기', '/contact', 'link'),
+('SALES_WIDGET', '매출 위젯', '/sales', 'widget');
 UNLOCK TABLES;
 
 --
@@ -273,3 +282,40 @@ CREATE TABLE `search_logs` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='검색 로그 테이블';
+
+-- =============================
+-- 영우랩스 매출 위젯(sales_history) 및 AI매출 intents/routes 추가
+-- =============================
+
+-- 1. sales_history 테이블 생성
+DROP TABLE IF EXISTS `sales_history`;
+CREATE TABLE `sales_history` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `year` int NOT NULL COMMENT '연도',
+  `month` int NOT NULL COMMENT '월',
+  `sales` bigint NOT NULL COMMENT '매출',
+  `purchase` bigint NOT NULL COMMENT '매입',
+  `business_expense` bigint NOT NULL COMMENT '사업비용',
+  `net_profit` bigint NOT NULL COMMENT '순이익',
+  PRIMARY KEY (`id`),
+  KEY `idx_year_month` (`year`, `month`)
+) ENGINE=InnoDB COMMENT='연도별 월별 매출 이력';
+
+-- 2. 2015~2025년 월별 매출 데이터 입력 (예시: 2015년)
+LOCK TABLES `sales_history` WRITE;
+-- 2015년: 3억 매출, 영업이익율 10%
+INSERT INTO `sales_history` (year, month, sales, purchase, business_expense, net_profit) VALUES
+(2015, 1, 25000000, 15000000, 7500000, 2500000),
+(2015, 2, 25000000, 15000000, 7500000, 2500000),
+(2015, 3, 25000000, 15000000, 7500000, 2500000),
+(2015, 4, 25000000, 15000000, 7500000, 2500000),
+(2015, 5, 25000000, 15000000, 7500000, 2500000),
+(2015, 6, 25000000, 15000000, 7500000, 2500000),
+(2015, 7, 25000000, 15000000, 7500000, 2500000),
+(2015, 8, 25000000, 15000000, 7500000, 2500000),
+(2015, 9, 25000000, 15000000, 7500000, 2500000),
+(2015, 10, 25000000, 15000000, 7500000, 2500000),
+(2015, 11, 25000000, 15000000, 7500000, 2500000),
+(2015, 12, 25000000, 15000000, 7500000, 2500000);
+-- (2016~2025년 데이터는 동일 패턴으로 추가, 실제 적용시 자동 생성 스크립트 활용 권장)
+UNLOCK TABLES;

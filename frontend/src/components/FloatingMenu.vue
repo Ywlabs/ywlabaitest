@@ -1,5 +1,5 @@
 <template>
-  <div class="floating-menu">
+  <div class="floating-menu-bar">
     <button @click="navigateTo('/')" class="floating-button">영우AI</button>
   </div>
 </template>
@@ -18,11 +18,13 @@ export default {
 </script>
 
 <style scoped>
-.floating-menu {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
+.floating-menu-bar {
+  position: absolute;
+  right: 24px;
+  bottom: 20%;
+  width: auto;
+  z-index: 100;
+  /* 필요시 배경, 패딩 등 추가 가능 */
 }
 
 .floating-button {

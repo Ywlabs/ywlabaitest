@@ -1,7 +1,9 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <router-link to="/" class="logo">영우랩스</router-link>
+      <router-link to="/" class="logo">
+        <img src="/assets/img/logo.png" alt="영우랩스 로고" class="logo-img" />
+      </router-link>
       <div class="nav-links">
         <div class="nav-item">
           <router-link to="/about" class="nav-link">회사소개</router-link>
@@ -74,10 +76,15 @@ export default {
 }
 
 .logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #2c3e50;
+  display: flex;
+  align-items: center;
   text-decoration: none;
+}
+
+.logo-img {
+  height: 36px;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 
 .nav-links {

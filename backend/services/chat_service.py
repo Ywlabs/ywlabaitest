@@ -292,15 +292,33 @@ def get_db_response(user_message, similar_question):
                                 }
                             }
                     else:
-                        # 템플릿 변수가 있는 경우 처리
-                        template_vars = response_data.get('template_variables', {})
+                        # 템플릿 변수 항상 먼저 가져오기 및 로깅
+                        template_vars = response_data.get('template_variables')
+                        logger.info(f"DB에서 읽은 template_variables: {template_vars}")
+                        if not template_vars:
+                            template_vars = {}
+                        if isinstance(template_vars, str):
+                            try:
+                                template_vars = json.loads(template_vars)
+                            except Exception:
+                                template_vars = {}
+                        # sales_status(매출) intent일 때 user_message에서 연도 추출
+                        if similar_question['intent_tag'] == 'sales_status':
+                            import re
+                            match = re.search(r'(20[0-9]{2})년', user_message)
+                            if match:
+                                year = int(match.group(1))
+                                template_vars['year'] = year
                         logger.debug(f"[get_db_response] 템플릿 변수: {template_vars}")
                         if template_vars:
                             response_text = response_data['response']
                             for var_name, var_value in template_vars.items():
-                                response_text = response_text.replace(f'{{{{{var_name}}}}}', str(var_value))
+                                # 1중 중괄호로 치환
+                                response_text = response_text.replace(f'{{{var_name}}}', str(var_value))
+                            logger.info(f"[get_db_response] 치환된 response_text: {response_text}")
                             response_data = dict(response_data)
                             response_data['response'] = response_text
+                        logger.info(f"DB에서 읽은 template_variables: {response_data['template_variables']}")
                         response = {
                             'status': 'success',
                             'data': {
@@ -309,7 +327,8 @@ def get_db_response(user_message, similar_question):
                                 'route_code': response_data['route_code'],
                                 'route_name': response_data['route_name'],
                                 'route_path': response_data['route_path'],
-                                'route_type': response_data['route_type']
+                                'route_type': response_data['route_type'],
+                                'response_params': template_vars  # 위젯용 파라미터(연도 등) 추가
                             }
                         }
                 else:
