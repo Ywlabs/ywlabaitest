@@ -22,7 +22,7 @@
   top: -10%;
   left: 0;
   width: 100%;
-  height: 95%;
+  height: 100%;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
@@ -33,5 +33,6 @@
   object-fit: cover; /* 왜곡 없이 꽉 차게 */
   object-position: left center; /* 왼쪽에 딱 붙게 */
   display: block;
+  transform: translateX(-10%); /* 왼쪽 여백 제거 */
 }
 </style> 
