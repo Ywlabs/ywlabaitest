@@ -22,4 +22,9 @@ class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     
     # 기타 설정
-    DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true' 
+    DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+
+    # Chroma DB 및 정책 문서 경로 (공통 설정)
+    # 한글 주석: Chroma DB 저장 경로와 정책 문서 경로를 공통 상수로 관리
+    CHROMA_DB_DIR = './chromadb/ywlabs_rag_db'
+    POLICY_DOCX_PATH = './metadata/ywlabs_policy_20250609.docx' 

@@ -55,7 +55,7 @@
                 </template>
                 <!-- 그 외에는 기존 텍스트 출력 -->
                 <template v-else>
-                  <span v-html="formatMessage(msg.content)"></span>
+                  <span v-html="renderMarkdown(msg.content)"></span>
                 </template>
                 <!-- route_code가 있으면 getRouteInfo로 route_type 분기 -->
                 <button v-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'widget'"
@@ -120,6 +120,8 @@ import OrganizationChart from '@/components/OrganizationChart.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
 import axios from 'axios'
 import { markRaw } from 'vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
 
@@ -285,11 +287,13 @@ export default {
     },
     formatMessage(content) {
       if (!content) return ''
-      
       return String(content)
         .replace(/\[.*?\]\(.*?\)/g, '') // 마크다운 링크 제거
         .replace(/\s+/g, ' ') // 불필요한 공백 정리
         .replace(/\n/g, '<br>')
+    },
+    renderMarkdown(text) {
+      return DOMPurify.sanitize(marked(text || ''))
     },
     async showWidget(route_code, msg = null) {
       if (widgetMap[route_code]) {
@@ -381,11 +385,11 @@ export default {
   background: #fff;
   color: #222;
   border-radius: 18px !important;
-  margin-right: 25%;
+  margin-right: 30%;
   max-width: 70%;
-  padding: 16px 22px;
-  font-size: 1.05em;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  padding: 12px 16px;
+  font-size: 0.98em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   position: relative;
   word-break: break-word;
   border: 1px solid #e6eaf1;
@@ -574,28 +578,51 @@ export default {
   background: #f8f9fa;
   color: #333;
   border-radius: 15px 15px 15px 2px;
-  margin-right: 30%;
-  max-width: 70%;
-  padding: 12px 16px;
+  margin-right: 0;
+  max-width: 100%;
+  padding: 12px 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
   font-size: 0.98em;
 }
 
-.employee-table {
-  width: 100%;
+/* 마크다운 표 스타일 (구분선 포함) */
+.ai-message .message-content table {
   border-collapse: collapse;
-  margin: 8px 0 8px 0;
+  width: 100%;
+  margin: 10px 0;
 }
-.employee-table th {
-  background: #f0f0f0;
+.ai-message .message-content th,
+.ai-message .message-content td {
+  border: 1px solid #ccc;
+  padding: 8px;
   text-align: left;
-  padding: 4px 8px;
-  font-weight: bold;
-  width: 80px;
 }
-.employee-table td {
-  background: #fff;
-  padding: 4px 8px;
+.ai-message .message-content th {
+  background: #e6eaf1;
+  font-weight: 600;
+  color: #2355d6;
+}
+.ai-message .message-content tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+/* 마크다운 리스트, 코드 등 스타일 */
+.ai-message .message-content ul,
+.ai-message .message-content ol {
+  margin: 10px 0 10px 24px;
+}
+.ai-message .message-content code {
+  background: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+.ai-message .message-content pre {
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+  font-size: 0.98em;
 }
 
 .company-info {

@@ -8,6 +8,8 @@ from routes.sales_routes import sales_bp  # 매출 API 블루프린트 추가
 from services.vector_service import initialize_vector_store, validate_vector_store
 from common.logger import setup_logger
 import threading
+from services.chroma_service import initialize_chroma_from_docx
+from config import Config  # 공통 설정 import
 
 # 로거 설정
 logger = setup_logger('app')
@@ -56,6 +58,15 @@ def initialize_backend():
         print("✓ 벡터 스토어 검증 완료: 정상")
     else:
         print("⚠ 벡터 스토어 검증 실패: 문제 발견")
+
+    # Chroma DB 초기화 (워드 문서 → 벡터DB)
+    print("\n3. Chroma DB 초기화 중...")
+    try:
+        # config.py의 공통 설정 사용
+        initialize_chroma_from_docx(docx_path=Config.POLICY_DOCX_PATH, chroma_dir=Config.CHROMA_DB_DIR)
+        print("✓ Chroma DB 초기화 완료: 정상")
+    except Exception as e:
+        print(f"⚠ Chroma DB 초기화 실패: {e}")
     
     print("\n=== 백엔드 초기화 완료 ===\n")
 

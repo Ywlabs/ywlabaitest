@@ -7,6 +7,8 @@ from services.employee_service import extract_employee_name, get_employee_info_a
 import numpy as np
 import json
 from services.vector_service import model
+from services.chroma_service import get_similar_context_from_chroma
+from config import Config
 
 # 로거 설정
 logger = setup_logger('chat_service')
@@ -18,7 +20,9 @@ openai_client = OpenAI(
 )
 
 def get_gpt_response(question, find_similar_question_func):
-    """질문에 대한 GPT 응답 생성 (최신 DB 구조 반영)"""
+    """
+    질문에 대한 GPT 응답 생성 (유사 질문이 없을 때만 ChatGPT 요청)
+    """
     start_time = time.time()
     logger.info(f"[시작] 질문 처리 시작: {question}")
     
@@ -34,76 +38,85 @@ def get_gpt_response(question, find_similar_question_func):
             logger.info(f"[1단계 완료] 유사 질문 찾음 (소요시간: {search_time:.2f}초)")
             logger.info(f"찾은 유사 질문: {similar_question.get('pattern_text')}")
             logger.info(f"유사도 점수: {similar_question.get('similarity_score', 'N/A')}")
+            # 유사 질문이 있으면 GPT 요청 없이 None 반환
+            return None
         else:
             logger.warning(f"[1단계 완료] 유사 질문을 찾지 못함 (소요시간: {search_time:.2f}초)")
         
-        if similar_question:
-            # 2. GPT 응답 생성
-            logger.info("[2단계] GPT 응답 생성 시작")
-            gpt_start = time.time()
-            
-            # 시스템 프롬프트 개선
-            system_prompt = """당신은 영우랩스의 도우미 어시스턴트입니다. 다음과 같은 역할을 수행합니다:
-            1. 주어진 컨텍스트를 바탕으로 정확하고 간결한 답변을 제공합니다
-            2. 직원 정보에 대한 질문이면 관련된 상세 정보에 초점을 맞춥니다
-            3. 회사 절차에 대한 질문이면 단계별 안내를 제공합니다
-            4. 확실하지 않은 내용이 있다면, 그 한계를 인정하고 대안적인 정보 획득 방법을 제안합니다
-            5. 항상 전문적이고 친근한 톤을 유지합니다
-            6. 컨텍스트에 충분한 정보가 없다면, 그 사실을 말하고 추가 정보를 찾을 수 있는 방법을 제안합니다
+        # 1-2. Chroma DB에서 유사 문단(정책 등) 검색
+        chroma_context = get_similar_context_from_chroma(question, chroma_dir=Config.CHROMA_DB_DIR)
+        
+        # 2. GPT 응답 생성 (유사 질문이 없을 때만)
+        logger.info("[2단계] GPT 응답 생성 시작")
+        gpt_start = time.time()
+        
+        # 시스템 프롬프트 개선 (Chroma 컨텍스트 포함, 마크다운 지시 및 예시 더 강하게)
+        system_prompt = f"""
+당신은 영우랩스의 도우미 어시스턴트입니다. 답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서 작성하세요.
 
-            다음 사항을 기억하세요:
-            - 답변은 구체적이고 명확해야 합니다
-            - 여러 항목이 있는 경우 글머리 기호를 사용합니다
-            - 관련 링크나 참조가 있다면 포함합니다
-            - 회사 용어를 일관되게 사용합니다
-            - 질문이 모호하다면 명확히 해달라고 요청합니다
-            - 컨텍스트가 질문과 완전히 일치하지 않는다면, 어떤 정보가 있는지 설명합니다"""
+- 여러 항목은 반드시 아래 예시처럼 줄바꿈과 함께 마크다운 리스트(- 또는 1. 2. 등)로 작성하세요.
+- 표가 필요하면 반드시 아래 예시처럼 각 행마다 줄바꿈을 넣어 마크다운 표로 작성하세요.
+- 표 셀에는 줄바꿈 없이 간결하게 작성하세요.
+- 리스트와 표를 혼합하지 말고, 표는 표만, 리스트는 리스트만 사용하세요.
+- 코드 예시가 필요하면 마크다운 코드블록(```)을 사용하세요.
 
-            # 사용자 프롬프트 개선
-            user_prompt = f"""컨텍스트: {similar_question.get('pattern_text')}
-질문: {question}
+예시(반드시 줄바꿈 포함):
 
-컨텍스트를 바탕으로 도움이 되는 답변을 제공해주세요. 컨텍스트가 질문을 완전히 다루지 못한다면, 그 사실을 인정하고 가능한 최선의 답변을 제공해주세요. 확실하지 않은 부분이 있다면 그렇게 말씀해주세요."""
+- 복지 제도
+  - 복지포인트
+  - 사내 기부금 관리
+  - 사내 사회공헌 활동
 
-            response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=500,
-                temperature=0.7,
-                presence_penalty=0.6,  # 반복 방지
-                frequency_penalty=0.3  # 다양성 증가
-            )
-            
-            gpt_time = time.time() - gpt_start
-            logger.info(f"[2단계 완료] GPT 응답 생성 완료 (소요시간: {gpt_time:.2f}초)")
-            
-            # 3. 응답 저장
-            logger.info("[3단계] 응답 저장 시작")
-            save_start = time.time()
-            
-            result = {
-                'response': response.choices[0].message.content,
-                'type': similar_question.get('response_type'),  # 'text' 또는 'dynamic' 등 텍스트 데이터 유형만 사용
-                'route_code': similar_question.get('route_code'),  # 프론트엔드가 routes 테이블 참조해 UI 분기
-                'target_url': similar_question.get('target_url'),
-                'button_text': similar_question.get('button_text')
-            }
-            
-            save_time = time.time() - save_start
-            logger.info(f"[3단계 완료] 응답 저장 완료 (소요시간: {save_time:.2f}초)")
-            
-            # 전체 처리 시간 로깅
-            total_time = time.time() - start_time
-            logger.info(f"[완료] 전체 처리 완료 (총 소요시간: {total_time:.2f}초)")
-            logger.info(f"- 유사 질문 검색: {search_time:.2f}초")
-            logger.info(f"- GPT 응답 생성: {gpt_time:.2f}초")
-            logger.info(f"- 응답 저장: {save_time:.2f}초")
-            
-            return result
-            
+| 항목 | 내용 |
+|------|------|
+| 복지포인트 | 연 1회 지급, 복지몰 사용 가능 |
+| 사내 기부금 관리 | 연 1회 공지, 지정 계좌 접수 |
+| 사내 사회공헌 활동 | 연 2회 이상 실시 |
+
+{chroma_context}
+"""
+
+        # 사용자 프롬프트 개선 (마크다운 지시 및 예시 더 강하게)
+        user_prompt = f"""질문: {question}\n답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서, 줄바꿈을 반드시 사용해 표와 리스트를 구분해서 작성해 주세요. 예시처럼 각 행마다 줄바꿈을 넣어주세요."""
+
+        response = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            max_tokens=500,
+            temperature=0.7,
+            presence_penalty=0.6,  # 반복 방지
+            frequency_penalty=0.3  # 다양성 증가
+        )
+        
+        gpt_time = time.time() - gpt_start
+        logger.info(f"[2단계 완료] GPT 응답 생성 완료 (소요시간: {gpt_time:.2f}초)")
+        
+        # 3. 응답 저장
+        logger.info("[3단계] 응답 저장 시작")
+        save_start = time.time()
+        
+        result = {
+            'response': response.choices[0].message.content,
+            'type': 'gpt',
+            'route_code': None,
+            'target_url': None,
+            'button_text': None
+        }
+        
+        save_time = time.time() - save_start
+        logger.info(f"[3단계 완료] 응답 저장 완료 (소요시간: {save_time:.2f}초)")
+        
+        # 전체 처리 시간 로깅
+        total_time = time.time() - start_time
+        logger.info(f"[완료] 전체 처리 완료 (총 소요시간: {total_time:.2f}초)")
+        logger.info(f"- 유사 질문 검색: {search_time:.2f}초")
+        logger.info(f"- GPT 응답 생성: {gpt_time:.2f}초")
+        logger.info(f"- 응답 저장: {save_time:.2f}초")
+        
+        return result
     except Exception as e:
         error_time = time.time() - start_time
         logger.error(f"[에러] 처리 중 오류 발생 (소요시간: {error_time:.2f}초)")
@@ -118,7 +131,6 @@ def get_gpt_response(question, find_similar_question_func):
                 'target_url': None,
                 'button_text': None
             }
-    
     # 기본 응답
     total_time = time.time() - start_time
     logger.warning(f"[완료] 기본 응답 반환 (총 소요시간: {total_time:.2f}초)")
@@ -364,9 +376,19 @@ def get_db_response(user_message, similar_question):
     return response, similar_question
 
 def get_ai_response(user_message, similar_question, find_similar_question_func):
-    """DB 기반 답변 우선, 없으면 LLM 생성 답변을 반환"""
+    """
+    DB 기반 답변 우선, 없으면 LLM(GPT) 생성 답변을 반환
+    유사 질문이 없거나 임계값 미달, 또는 기본 응답만 반환되는 경우에는 반드시 GPT로 넘깁니다.
+    """
     db_response, similar_question = get_db_response(user_message, similar_question)
-    if not db_response or db_response['data']['response'] in ['죄송합니다. 이해하지 못했습니다.', None]:
+    # 조건 강화: 유사 질문 없음, 임계값 미달, 기본 응답만 반환 시 GPT로
+    if (
+        not db_response
+        or db_response['data']['response'] in ['죄송합니다. 이해하지 못했습니다.', None]
+        or not similar_question
+        or similar_question.get('intent_tag') is None
+    ):
+        # 항상 GPT로 넘김
         gpt_result = get_gpt_response(user_message, find_similar_question_func)
         response = {
             'status': 'success',

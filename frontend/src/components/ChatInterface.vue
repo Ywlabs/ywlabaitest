@@ -3,7 +3,8 @@
     <div class="chat-messages" ref="messagesContainer">
       <div v-for="(message, index) in messages" :key="index" 
            :class="['message', message.type]">
-        <div class="message-content">
+        <div class="message-content" v-if="message.response_type === 'gpt'" v-html="renderMarkdown(message.content)" />
+        <div class="message-content" v-else>
           {{ message.content }}
           <div v-if="message.type === 'button_action' && message.button_text" class="action-buttons">
             <button @click="handleButtonAction(message.target_url)" class="action-button">
@@ -11,7 +12,6 @@
             </button>
           </div>
         </div>
-        
       </div>
     </div>
     <div class="chat-input">
@@ -30,6 +30,8 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import SalesWidget from '../widgets/SalesWidget.vue'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
@@ -66,6 +68,8 @@ export default {
       openedSalesWidgets.value = openedSalesWidgets.value.filter(i => i !== idx)
     }
 
+    const renderMarkdown = (text) => DOMPurify.sanitize(marked(text || ''))
+
     const sendMessage = async () => {
       if (!userInput.value.trim()) return
 
@@ -91,10 +95,14 @@ export default {
         messages.value.push({
           type: data.type === 'page_redirect' ? 'system' : 'ai',
           content: data.content,
+          response_type: data.response_type,
           target_url: data.target_url,
           button_text: data.button_text,
           route_code: data.route_code
         })
+
+
+        console.log(data.response_type+"=======================")
 
         if (data.type === 'page_redirect' && data.target_url) {
           setTimeout(() => {
@@ -127,7 +135,8 @@ export default {
       handleButtonAction,
       openedSalesWidgets,
       openSalesWidget,
-      closeSalesWidget
+      closeSalesWidget,
+      renderMarkdown
     }
   }
 }
@@ -150,6 +159,37 @@ export default {
   background: #f5f5f5;
   border-radius: 10px;
   margin-bottom: 20px;
+}
+
+/* 마크다운 표, 리스트, 코드 등 스타일 추가 */
+.chat-messages table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+.chat-messages th, .chat-messages td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+.chat-messages tr:nth-child(even) {
+  background: #f9f9f9;
+}
+.chat-messages ul, .chat-messages ol {
+  margin: 10px 0 10px 24px;
+}
+.chat-messages code {
+  background: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 0.95em;
+}
+.chat-messages pre {
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+  font-size: 0.98em;
 }
 
 .message {
