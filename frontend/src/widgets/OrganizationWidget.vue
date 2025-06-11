@@ -1,15 +1,23 @@
 <template>
   <div class="org-chart-widget">
-    <!-- 닫기 버튼: 오른쪽 상단 고정 -->
-    <button class="close-btn" @click="$emit('close')" title="닫기">×</button>
-    <h3>조직도</h3>
+    <div class="org-header">
+      <h3>영우랩스 조직도</h3>
+      <button class="close-btn" @click="$emit('close')" title="닫기">×</button>
+    </div>
     <div v-if="loading" class="loading">불러오는 중...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <ul v-else class="employee-list">
       <li v-for="emp in employees" :key="emp.id" class="employee-item">
-        <div class="emp-name">{{ emp.name }}</div>
-        <div class="emp-position">{{ emp.position }}</div>
+        <div class="emp-row">
+          <span class="emp-name">{{ emp.name }}</span>
+          <span class="emp-position">{{ emp.position }}</span>
+        </div>
         <div class="emp-dept">{{ emp.department }}</div>
+        <div class="emp-contact" v-if="emp.phone || emp.email">
+          <span v-if="emp.phone">📱 {{ emp.phone }}</span>
+          <span v-if="emp.phone && emp.email"> &nbsp;|&nbsp; </span>
+          <span v-if="emp.email">✉️ {{ emp.email }}</span>
+        </div>
       </li>
     </ul>
   </div>
@@ -94,11 +102,21 @@ export default {
   flex-direction: column;
   align-items: flex-start;
 }
+.emp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
 .emp-name {
   font-weight: bold;
   font-size: 1.1em;
 }
-.emp-position, .emp-dept {
+.emp-position {
+  font-size: 0.98em;
+  color: #555;
+}
+.emp-dept {
   font-size: 0.95em;
   color: #555;
 }
@@ -109,5 +127,25 @@ export default {
 .error {
   color: #d32f2f;
   margin: 20px 0;
+}
+.emp-contact {
+  font-size: 0.85em;
+  color: #888;
+  margin-top: 2px;
+}
+.org-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  margin-top: 0;
+}
+.org-chart-widget h3 {
+  text-align: left;
+  margin: 0;
+  padding: 0;
+  font-size: 1.08em;
+  color: #666;
+  font-weight: bold;
 }
 </style> 

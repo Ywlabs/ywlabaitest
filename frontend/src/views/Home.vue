@@ -15,7 +15,7 @@
                 :is="activeWidgetComponent"
                 v-bind="activeWidgetProps"
                 :key="activeWidgetKey"
-                @close="activeWidgetComponent = null"
+                @close="closeWidget"
               />
               <div v-else class="empty-widget-message">
                 <lottie-player
@@ -37,63 +37,7 @@
 
       <!-- Center Column (40%) -->
       <div class="center-column">
-        <div class="chat-container" ref="chatContainer">
-          <div class="chat-messages" ref="chatMessages">
-            <div v-for="(msg, idx) in messages" :key="idx" :class="[msg.type === 'user' ? 'user-message' : 'ai-message']">
-              <div class="message-content">
-                <!-- AI 메시지이면서 직원 정보가 구조화되어 있으면 표로 출력 -->
-                <template v-if="msg.type === 'ai' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
-                  <table class="employee-table">
-                    <tbody>
-                      <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
-                      <tr><th>직책</th><td>{{ msg.response_json.data.employee.position }}</td></tr>
-                      <tr><th>부서</th><td>{{ msg.response_json.data.employee.dept_nm }}</td></tr>
-                      <tr><th>이메일</th><td>{{ msg.response_json.data.employee.email }}</td></tr>
-                      <tr><th>연락처</th><td>{{ msg.response_json.data.employee.phone }}</td></tr>
-                    </tbody>
-                  </table>
-                </template>
-                <!-- 그 외에는 기존 텍스트 출력 -->
-                <template v-else>
-                  <span v-html="renderMarkdown(msg.content)"></span>
-                </template>
-                <!-- route_code가 있으면 getRouteInfo로 route_type 분기 -->
-                <button v-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'widget'"
-                        @click="showWidget(msg.route_code, msg)"
-                        class="action-button">
-                  {{ getRouteInfo(msg.route_code)?.route_name || '위젯 열기' }}
-                </button>
-                <button v-else-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'link'"
-                        @click="navigateTo(getRouteInfo(msg.route_code)?.route_path)"
-                        class="action-button">
-                  {{ getRouteInfo(msg.route_code)?.route_name || '자세히 보기' }}
-                </button>
-              </div>
-            </div>
-            <!-- 로딩 애니메이션 -->
-            <div v-if="isLoading" class="loading-indicator">
-              <span class="spinner"></span> 조회중입니다...
-            </div>
-          </div>
-          <div class="chat-input">
-            <input type="text" 
-                   v-model="userInput" 
-                   ref="inputBox"
-                   @keyup.enter="sendMessage"
-                   placeholder="질문을 입력하세요..."
-                   class="message-input">
-            <button @click="sendMessage" class="send-button">전송</button>
-          </div>
-          <div class="ai-guide-banner">
-            <span class="ai-icon">🤖</span>
-            <span>영우랩스 AI가 동작중입니다. 궁금하신사항을 물어 보세요</span>
-            <span class="ai-typing">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
-            </span>
-          </div>
-        </div>
+        <ChatInterface ref="chatRef" @open-widget="handleOpenWidget" />
       </div>
 
       <!-- Right Column (30%) -->
@@ -116,8 +60,8 @@
 import AnimationBackground from '@/components/AnimationBackground.vue'
 import FloatingMenu from '@/components/FloatingMenu.vue'
 import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
-import OrganizationChart from '@/components/OrganizationChart.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
+import ChatInterface from '@/components/ChatInterface.vue'
 import axios from 'axios'
 import { markRaw } from 'vue'
 import { marked } from 'marked'
@@ -147,19 +91,11 @@ export default {
     AnimationBackground,
     FloatingMenu,
     EnvironmentWidget,
-    OrganizationChart,
-    SalesWidget
+    SalesWidget,
+    ChatInterface
   },
   data() {
     return {
-      userInput: '',
-      messages: [
-        {
-          type: 'ai',
-          content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?'
-        }
-      ],
-      isLoading: false,
       fullText: '영우랩스 AI가 동작중입니다.',
       animatedText: '',
       showCursor: true,
@@ -176,7 +112,6 @@ export default {
   },
   async created() {
     await this.loadRoutes() // 앱 로딩 시 routes 정보 먼저 가져옴
-    await this.loadChatHistory()
     this.fetchPopularQuestions()
   },
   mounted() {
@@ -185,13 +120,13 @@ export default {
     this.cursorInterval = setInterval(() => {
       this.showCursor = !this.showCursor;
     }, 500);
+    this.loadLastWidget();
   },
   beforeDestroy() {
     clearInterval(this.typingInterval);
     clearInterval(this.cursorInterval);
   },
   methods: {
-    // routes 정보를 API로 받아와 저장
     async loadRoutes() {
       try {
         const res = await api.get('/api/routes')
@@ -202,39 +137,8 @@ export default {
         this.routeList = []
       }
     },
-    // route_code로 route 정보 조회
     getRouteInfo(route_code) {
       return this.routeList.find(r => r.route_code === route_code)
-    },
-    async loadChatHistory() {
-      try {
-        const response = await api.get('/api/chat/history')
-        if (response.data && response.data.status === 'success' && Array.isArray(response.data.data)) {
-          // 최신순으로 정렬
-          const history = [...response.data.data].reverse();
-          // 각 item마다 [질문, 답변] 순서로 메시지 추가 (response_json 포함)
-          const formattedHistory = history.map(item => [
-            { type: 'user', content: item.user_message },
-            { 
-              type: 'ai', 
-              content: item.ai_response || '죄송합니다. 응답을 생성하지 못했습니다.',
-              route_code: item.route_code,
-              route_type: item.route_type,
-              route_name: item.route_name,
-              route_path: item.route_path,
-              response_json: item.response_json // 구조화 응답 포함
-            }
-          ]).flat();
-          this.messages = formattedHistory;
-          this.scrollToBottom();
-        } else {
-          console.error('Invalid history data format:', response.data)
-          this.messages = []
-        }
-      } catch (error) {
-        console.error('채팅 히스토리 로딩 중 오류 발생:', error)
-        this.messages = []
-      }
     },
     async fetchPopularQuestions() {
       try {
@@ -245,68 +149,33 @@ export default {
       }
     },
     setPrompt(q) {
-      this.userInput = q
-      this.$refs.inputBox && this.$refs.inputBox.focus()
-    },
-    async sendMessage() {
-      if (!this.userInput.trim()) return
-      this.messages.push({ type: 'user', content: this.userInput })
-      const userMessage = this.userInput
-      this.userInput = ''
-      this.isLoading = true
-      try {
-        const response = await api.post('/api/chat', { 
-          message: userMessage
-        })
-        const data = response.data.data
-        if (data) {
-          this.messages.push({
-            type: 'ai',
-            content: data.response,
-            route_code: data.route_code,
-            route_type: data.route_type,
-            route_name: data.route_name,
-            route_path: data.route_path,
-            response_json: { data } // 구조화 응답 포함
-          })
-        }
-        this.fetchPopularQuestions()
-      } catch (error) {
-        console.error('Error:', error)
-        let errorMessage = '죄송합니다. 오류가 발생했습니다.'
-        if (error.code === 'ECONNABORTED') {
-          errorMessage = '요청 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
-        } else if (error.response) {
-          errorMessage = error.response.data.message || errorMessage
-        }
-        this.messages.push({ type: 'ai', content: errorMessage })
-      } finally {
-        this.isLoading = false
-        this.scrollToBottom()
+      if (this.$refs.chatRef && this.$refs.chatRef.setUserInput) {
+        this.$refs.chatRef.setUserInput(q);
       }
     },
-    formatMessage(content) {
-      if (!content) return ''
-      return String(content)
-        .replace(/\[.*?\]\(.*?\)/g, '') // 마크다운 링크 제거
-        .replace(/\s+/g, ' ') // 불필요한 공백 정리
-        .replace(/\n/g, '<br>')
-    },
-    renderMarkdown(text) {
-      return DOMPurify.sanitize(marked(text || ''))
-    },
-    async showWidget(route_code, msg = null) {
+    async handleOpenWidget({ route_code, widgetProps }) {
       if (widgetMap[route_code]) {
         const comp = (await widgetMap[route_code]()).default
-        // response_params를 위젯에 prop으로 그대로 전달 (범용)
-        let widgetProps = {}
-        if (msg && msg.response_json && msg.response_json.data && msg.response_json.data.response_params) {
-          widgetProps = { ...msg.response_json.data.response_params }
-        }
         this.activeWidgetComponent = markRaw(comp)
-        this.activeWidgetCode = route_code
         this.activeWidgetKey += 1
         this.activeWidgetProps = widgetProps
+        // localStorage에 마지막 위젯 정보 저장
+        localStorage.setItem('lastAiWidget', JSON.stringify({ route_code, widgetProps }));
+      }
+    },
+    closeWidget() {
+      this.activeWidgetComponent = null;
+      localStorage.removeItem('lastAiWidget');
+    },
+    async loadLastWidget() {
+      const last = localStorage.getItem('lastAiWidget');
+      if (last) {
+        try {
+          const { route_code, widgetProps } = JSON.parse(last);
+          await this.handleOpenWidget({ route_code, widgetProps });
+        } catch (e) {
+          // 파싱 에러 등 예외 무시
+        }
       }
     },
     navigateTo(path) {
@@ -319,7 +188,6 @@ export default {
         const el = this.$refs.chatMessages;
         if (el) {
           el.scrollTop = el.scrollHeight;
-          // 스크롤이 짤리지 않도록 추가 여백 확보
           el.scrollTop += 20;
         }
       });

@@ -34,14 +34,15 @@ def get_gpt_response(question, find_similar_question_func):
         similar_question = find_similar_question_func(message_vector)
         search_time = time.time() - search_start
         
-        if similar_question:
+        # 유사 질문이 있고, 유사도 임계값(0.7) 초과 시에만 GPT 요청 없이 None 반환
+        if similar_question and similar_question.get('similarity_score', 0) > 0.7:
             logger.info(f"[1단계 완료] 유사 질문 찾음 (소요시간: {search_time:.2f}초)")
             logger.info(f"찾은 유사 질문: {similar_question.get('pattern_text')}")
             logger.info(f"유사도 점수: {similar_question.get('similarity_score', 'N/A')}")
-            # 유사 질문이 있으면 GPT 요청 없이 None 반환
+            # 유사도 임계값 초과 시에만 GPT 요청 없이 None 반환
             return None
         else:
-            logger.warning(f"[1단계 완료] 유사 질문을 찾지 못함 (소요시간: {search_time:.2f}초)")
+            logger.warning(f"[1단계 완료] 유사 질문을 찾지 못함 또는 임계값 미달 (소요시간: {search_time:.2f}초)")
         
         # 1-2. Chroma DB에서 유사 문단(정책 등) 검색
         chroma_context = get_similar_context_from_chroma(question, chroma_dir=Config.CHROMA_DB_DIR)
@@ -52,26 +53,26 @@ def get_gpt_response(question, find_similar_question_func):
         
         # 시스템 프롬프트 개선 (Chroma 컨텍스트 포함, 마크다운 지시 및 예시 더 강하게)
         system_prompt = f"""
-당신은 영우랩스의 도우미 어시스턴트입니다. 답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서 작성하세요.
+        당신은 영우랩스의 도우미 어시스턴트입니다. 답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서 작성하세요.
 
-- 여러 항목은 반드시 아래 예시처럼 줄바꿈과 함께 마크다운 리스트(- 또는 1. 2. 등)로 작성하세요.
-- 표가 필요하면 반드시 아래 예시처럼 각 행마다 줄바꿈을 넣어 마크다운 표로 작성하세요.
-- 표 셀에는 줄바꿈 없이 간결하게 작성하세요.
-- 리스트와 표를 혼합하지 말고, 표는 표만, 리스트는 리스트만 사용하세요.
-- 코드 예시가 필요하면 마크다운 코드블록(```)을 사용하세요.
+        - 여러 항목은 반드시 아래 예시처럼 줄바꿈과 함께 마크다운 리스트(- 또는 1. 2. 등)로 작성하세요.
+        - 표가 필요하면 반드시 아래 예시처럼 각 행마다 줄바꿈을 넣어 마크다운 표로 작성하세요.
+        - 표 셀에는 줄바꿈 없이 간결하게 작성하세요.
+        - 리스트와 표를 혼합하지 말고, 표는 표만, 리스트는 리스트만 사용하세요.
+        - 코드 예시가 필요하면 마크다운 코드블록(```)을 사용하세요.
 
-예시(반드시 줄바꿈 포함):
+        예시(반드시 줄바꿈 포함):
 
-- 복지 제도
-  - 복지포인트
-  - 사내 기부금 관리
-  - 사내 사회공헌 활동
+        - 복지 제도
+        - 복지포인트
+        - 사내 기부금 관리
+        - 사내 사회공헌 활동
 
-| 항목 | 내용 |
-|------|------|
-| 복지포인트 | 연 1회 지급, 복지몰 사용 가능 |
-| 사내 기부금 관리 | 연 1회 공지, 지정 계좌 접수 |
-| 사내 사회공헌 활동 | 연 2회 이상 실시 |
+        | 항목 | 내용 |
+        |------|------|
+        | 복지포인트 | 연 1회 지급, 복지몰 사용 가능 |
+        | 사내 기부금 관리 | 연 1회 공지, 지정 계좌 접수 |
+        | 사내 사회공헌 활동 | 연 2회 이상 실시 |
 
 {chroma_context}
 """
@@ -184,7 +185,7 @@ def get_chat_history():
                 FROM chat_history ch
                 LEFT JOIN routes r ON ch.route_code = r.route_code
                 ORDER BY ch.created_at DESC 
-                LIMIT 10
+                LIMIT 5
             ''')
             history = cursor.fetchall()
             return [
@@ -390,17 +391,30 @@ def get_ai_response(user_message, similar_question, find_similar_question_func):
     ):
         # 항상 GPT로 넘김
         gpt_result = get_gpt_response(user_message, find_similar_question_func)
-        response = {
-            'status': 'success',
-            'data': {
-                'response': gpt_result['response'],
-                'response_type': 'gpt',
-                'route_code': None,
-                'route_name': None,
-                'route_path': None,
-                'route_type': None
+        if gpt_result is None:
+            response = {
+                'status': 'success',
+                'data': {
+                    'response': 'AI 응답을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+                    'response_type': 'text',
+                    'route_code': None,
+                    'route_name': None,
+                    'route_path': None,
+                    'route_type': None
+                }
             }
-        }
+        else:
+            response = {
+                'status': 'success',
+                'data': {
+                    'response': gpt_result['response'],
+                    'response_type': 'gpt',
+                    'route_code': None,
+                    'route_name': None,
+                    'route_path': None,
+                    'route_type': None
+                }
+            }
     else:
         response = db_response
     return response, similar_question 
