@@ -90,7 +90,7 @@ import DOMPurify from 'dompurify'
 const widgetMap = {
   ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
   SALES_WIDGET: () => import('@/widgets/SalesWidget.vue'),
-  DASHBOARD_WIDGET: () => import('@/widgets/DashboardWidgetGrid.vue'),
+  DASHBOARD_WIDGET: () => import('@/widgets/energy/DashboardWidgetGrid.vue'),
   // 앞으로 추가될 위젯은 Widget 네이밍 사용
 }
 

@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="dashboard-dim" @click="$emit('close')"></div>
-    <div class="dashboard-widget-grid">
-      <!-- 상단: 검색창/버튼/닫기 -->
-      <div class="dashboard-header">
+  <div class="dashboard-widget-grid">
+    <!-- 상단: 검색창/버튼/닫기 -->
+    <div class="dashboard-header">
         <div class="search-container">
           <div class="search-area">
             <input 
@@ -32,7 +32,7 @@
             >
               {{ search }}
             </span>
-          </div>
+    </div>
         </div>
       </div>
       <div class="dashboard-body">
@@ -51,14 +51,14 @@
             </div>
           </div>
         </div>
-        <div class="widget-grid">
-          <div v-for="n in 4" :key="n" class="widget-slot">
-            <component
-              v-if="selectedWidgets[n-1]"
-              :is="selectedWidgets[n-1].componentName"
-              v-bind="selectedWidgets[n-1].props"
-              @close="removeWidget(n-1)"
-            />
+      <div class="widget-grid">
+        <div v-for="n in 4" :key="n" class="widget-slot">
+          <component
+            v-if="selectedWidgets[n-1]"
+            :is="selectedWidgets[n-1].componentName"
+            v-bind="selectedWidgets[n-1].props"
+            @close="removeWidget(n-1)"
+          />
             <div v-else class="empty-slot">
               <lottie-player
                 src="/assets/json/loading_ani.json"

@@ -58,14 +58,14 @@ export default {
       if (facilityChart.value) {
         const ctx = facilityChart.value.getContext('2d')
         const data = {
-          labels: facilityData.value.map(f => f.name),
-          datasets: [{
-            label: '에너지 사용량 (kWh)',
-            data: facilityData.value.map(f => f.usage),
-            backgroundColor: facilityData.value.map(f => 
-              f.efficiency >= 80 ? '#4CAF50' : f.efficiency < 60 ? '#f44336' : '#2196F3'
-            )
-          }]
+            labels: facilityData.value.map(f => f.name),
+            datasets: [{
+              label: '에너지 사용량 (kWh)',
+              data: facilityData.value.map(f => f.usage),
+              backgroundColor: facilityData.value.map(f => 
+                f.efficiency >= 80 ? '#4CAF50' : f.efficiency < 60 ? '#f44336' : '#2196F3'
+              )
+            }]
         }
 
         chart.value = new Chart(ctx, {
@@ -106,8 +106,8 @@ export default {
               label: '에너지 사용량 (kWh)',
               data: facilityData.value.map(f => f.usage),
               backgroundColor: facilityData.value.map(f => 
-                f.efficiency >= 80 ? '#4CAF50' : f.efficiency < 60 ? '#f44336' : '#2196F3'
-              )
+            f.efficiency >= 80 ? '#4CAF50' : f.efficiency < 60 ? '#f44336' : '#2196F3'
+          )
             }]
           }
           chart.value.data = newData
@@ -121,7 +121,7 @@ export default {
     onMounted(() => {
       facilityData.value = generateData()
       nextTick(() => {
-        initChart()
+      initChart()
       })
     })
 

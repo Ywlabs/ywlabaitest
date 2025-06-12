@@ -1,12 +1,14 @@
 # 시스템 패턴
 
 ## 아키텍처 개요
-[시스템 아키텍처에 대한 상위 수준 설명]
+- 프론트엔드: Vue 3, Vite, Pinia, Element Plus 기반 SPA
+- 위젯은 동적 import, 그리드/검색/상태 관리 분리
 
 ## 디자인 패턴
 ### 프론트엔드 패턴
-- [패턴 1]
-- [패턴 2]
+- 동적 컴포넌트 로딩
+- 상태 관리(Pinia)
+- Lottie 애니메이션 활용
 
 ### 백엔드 패턴
 - [패턴 1]
@@ -15,17 +17,20 @@
 ## 컴포넌트 관계
 ```mermaid
 graph TD
-    A[컴포넌트 A] --> B[컴포넌트 B]
-    B --> C[컴포넌트 C]
+    DashboardWidgetGrid --> WidgetSlot
+    WidgetSlot --> EnergyWidget(동적)
+    DashboardWidgetGrid --> SearchPanel
+    DashboardWidgetGrid --> RecentSearchTags
+    WidgetSlot --> LottieLoader
 ```
 
 ## 주요 기술 결정사항
-- [결정사항 1]
-- [결정사항 2]
-- [결정사항 3]
+- 위젯 동적 import
+- 로컬스토리지 기반 최근 검색
+- Lottie 애니메이션
 
 ## 데이터 흐름
-[시스템 내 데이터 흐름에 대한 설명]
+- 검색 → 위젯 선택 → 그리드 배치 → 실시간/시뮬 데이터 표시
 
 ## 보안 패턴
 - [보안 패턴 1]

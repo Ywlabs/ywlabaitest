@@ -3,13 +3,11 @@
 ## 기술 스택
 ### 프론트엔드
 - Vue 3
-- TypeScript
 - Vite
 - Pinia
-- Vue Router
 - Element Plus
-- Axios
-- @vueuse/core
+- Lottie-web
+- localStorage
 
 ### 백엔드
 - Python 3.8+
@@ -47,7 +45,7 @@
 
 ## 의존성
 ### 프로덕션 의존성
-- 프론트엔드: vue, vue-router, pinia, element-plus, axios, @vueuse/core
+- 프론트엔드: vue, vue-router, pinia, element-plus, axios, @vueuse/core, lottie-web
 - 백엔드: Flask, Flask-Cors, Flask-SQLAlchemy, SQLAlchemy, openai, mysqlclient, PyMySQL, sentence-transformers, numpy
 
 ### 개발 의존성
@@ -55,6 +53,8 @@
 - 백엔드: pytest, black, flake8, python-dotenv
 
 ## 기술적 제약사항
+- 프론트엔드: HMR/동적 import 관련 Vite 환경 이슈(해결)
+- 위젯별 실데이터 연동은 추후 확장
 - 백엔드는 Python 3.8+ 및 MySQL 환경 필요
 - OpenAI API Key 필수
 - 프론트엔드는 Vue 3 및 Vite 기반, Node 16+ 필요
