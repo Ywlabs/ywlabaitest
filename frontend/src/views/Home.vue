@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <AnimationBackground />
-    <div class="layout-container">
+    <div class="layout-container" ref="layoutContainer">
       <!-- Left Column (30%) -->
       <div class="left-column">
         <div class="widget-container">
@@ -52,6 +52,26 @@
         </div>
       </div>
     </div>
+    <!-- 오버레이: DASHBOARD_WIDGET일 때만 표시 -->
+    <div v-if="showDashboardOverlay">
+      <!-- 반투명 블러 배경 -->
+      <div 
+        class="dashboard-overlay-backdrop" 
+        @wheel.prevent 
+        @touchmove.prevent 
+        @mousedown.prevent 
+        @click.prevent
+        style="position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.25); backdrop-filter: blur(2px); z-index: 999;"
+      ></div>
+      <!-- 오버레이 위젯 -->
+      <div :style="{ ...dashboardOverlayStyle, cursor: 'move' }" class="dashboard-overlay" @mousedown="onOverlayHeaderMouseDown">
+        <component
+          v-if="dashboardWidgetComponent"
+          :is="dashboardWidgetComponent"
+          @close="showDashboardOverlay = false"
+        />
+      </div>
+    </div>
     <FloatingMenu />
   </div>
 </template>
@@ -62,28 +82,17 @@ import FloatingMenu from '@/components/FloatingMenu.vue'
 import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
-import axios from 'axios'
+import api from '@/common/axios'
 import { markRaw } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000';
-
 const widgetMap = {
   ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
   SALES_WIDGET: () => import('@/widgets/SalesWidget.vue'),
+  DASHBOARD_WIDGET: () => import('@/widgets/DashboardWidgetGrid.vue'),
   // 앞으로 추가될 위젯은 Widget 네이밍 사용
 }
-
-// axios 인스턴스 생성
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000, // 30초 타임아웃
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  withCredentials: true // CORS 요청에 credentials 포함
-});
 
 export default {
   name: 'Home',
@@ -107,7 +116,14 @@ export default {
       activeWidgetComponent: null,
       activeWidgetKey: 0,
       routeList: [], // routes 정보를 저장
-      activeWidgetProps: {}
+      activeWidgetProps: {},
+      dashboardOverlayStyle: {},
+      showDashboardOverlay: false,
+      dashboardWidgetComponent: null,
+      dragOffset: { x: 0, y: 0 },
+      isDragging: false,
+      dragStart: { x: 0, y: 0 },
+      overlayPos: null, // 드래그 시 top/left
     }
   },
   async created() {
@@ -154,12 +170,39 @@ export default {
       }
     },
     async handleOpenWidget({ route_code, widgetProps }) {
-      if (widgetMap[route_code]) {
-        const comp = (await widgetMap[route_code]()).default
+      const code = route_code ? route_code.toUpperCase() : '';
+      console.log('route_code:', route_code, 'code:', code); // 디버깅용
+      if (code === 'DASHBOARD_WIDGET') {
+        const comp = (await widgetMap[code]()).default;
+        this.dashboardWidgetComponent = markRaw(comp);
+        this.$nextTick(() => {
+          const layout = this.$refs.layoutContainer;
+          if (layout) {
+            const rect = layout.getBoundingClientRect();
+            const minHeight = 600;
+            const maxHeight = Math.max(window.innerHeight * 0.9, minHeight);
+            // 중앙 정렬로 시작
+            this.overlayPos = null;
+            this.dashboardOverlayStyle = {
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: rect.width + 'px',
+              minHeight: minHeight + 'px',
+              maxHeight: maxHeight + 'px',
+              zIndex: 1000,
+              overflow: 'hidden',
+              transition: 'opacity 0.3s'
+            };
+            this.showDashboardOverlay = true;
+          }
+        });
+      } else if (widgetMap[code]) {
+        const comp = (await widgetMap[code]()).default
         this.activeWidgetComponent = markRaw(comp)
         this.activeWidgetKey += 1
         this.activeWidgetProps = widgetProps
-        // localStorage에 마지막 위젯 정보 저장
         localStorage.setItem('lastAiWidget', JSON.stringify({ route_code, widgetProps }));
       }
     },
@@ -203,7 +246,45 @@ export default {
           clearInterval(this.typingInterval);
         }
       }, 50);
-    }
+    },
+    onOverlayHeaderMouseDown(e) {
+      // 드래그 시작: transform 제거, top/left로 전환
+      const popup = e.target.closest('.dashboard-overlay');
+      if (!popup) return;
+      const rect = popup.getBoundingClientRect();
+      this.isDragging = true;
+      this.dragStart = { x: e.clientX, y: e.clientY };
+      this.dragOffset = { x: rect.left, y: rect.top };
+      this.overlayPos = { top: rect.top, left: rect.left };
+      // transform 제거, top/left로 전환
+      this.dashboardOverlayStyle = {
+        ...this.dashboardOverlayStyle,
+        top: rect.top + 'px',
+        left: rect.left + 'px',
+        transform: '',
+      };
+      document.addEventListener('mousemove', this.onOverlayMouseMove);
+      document.addEventListener('mouseup', this.onOverlayMouseUp);
+    },
+    onOverlayMouseMove(e) {
+      if (!this.isDragging) return;
+      const dx = e.clientX - this.dragStart.x;
+      const dy = e.clientY - this.dragStart.y;
+      const newLeft = this.dragOffset.x + dx;
+      const newTop = this.dragOffset.y + dy;
+      this.overlayPos = { top: newTop, left: newLeft };
+      this.dashboardOverlayStyle = {
+        ...this.dashboardOverlayStyle,
+        top: newTop + 'px',
+        left: newLeft + 'px',
+        transform: '',
+      };
+    },
+    onOverlayMouseUp() {
+      this.isDragging = false;
+      document.removeEventListener('mousemove', this.onOverlayMouseMove);
+      document.removeEventListener('mouseup', this.onOverlayMouseUp);
+    },
   },
   watch: {
     messages() {

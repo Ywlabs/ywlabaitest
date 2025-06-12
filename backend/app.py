@@ -5,6 +5,7 @@ from routes.vector_routes import vector_bp
 from routes.employee_routes import employee_bp
 from routes.legacy_routes import legacy_bp
 from routes.sales_routes import sales_bp  # 매출 API 블루프린트 추가
+from routes.widget_routes import widget_bp  
 from services.vector_service import initialize_vector_store, validate_vector_store
 from common.logger import setup_logger
 import threading
@@ -37,7 +38,7 @@ def create_app():
     app.register_blueprint(routes_bp)  # routes API 블루프린트 등록
     app.register_blueprint(legacy_bp)  # legacy API 블루프린트 등록
     app.register_blueprint(sales_bp)   # 매출 API 블루프린트 등록
-    
+    app.register_blueprint(widget_bp)  # 위젯 API 블루프린트 등록
     return app
 
 app = create_app()

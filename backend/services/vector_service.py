@@ -245,6 +245,7 @@ def find_similar_question(question_vector, top_k=1):
                         max_similarity = similarity
                         best_match = {
                             'pattern_id': result['pattern_id'],
+                            'pattern_id': result['pattern_id'],
                             'pattern_text': result['pattern_text'],
                             'response': result['response'],
                             'pattern_type': result['pattern_type'],
@@ -267,6 +268,33 @@ def find_similar_question(question_vector, top_k=1):
     finally:
         conn.close()
 
+def find_similar_widget(question_vector, top_k=20, min_similarity=0.4):
+    """
+    위젯 벡터만 대상으로 유사도 TOP-K 검색 (임계값 0.4, 최대 20개)
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute('''
+                SELECT widget_id, vector
+                FROM vector_store
+                WHERE vector_type = 'widget' AND vector_status = 'completed'
+            ''')
+            results = cursor.fetchall()
+            scored = []
+            for row in results:
+                stored_vector = np.array(json.loads(row['vector']), dtype=float)
+                q_vector = np.array(question_vector, dtype=float)
+                similarity = np.dot(q_vector, stored_vector) / (
+                    np.linalg.norm(q_vector) * np.linalg.norm(stored_vector)
+                )
+                scored.append({'widget_id': row['widget_id'], 'similarity': float(similarity)})
+            # 유사도 내림차순 정렬 후 top_k 반환 (임계값 0.4)
+            scored = sorted(scored, key=lambda x: x['similarity'], reverse=True)
+            return [s for s in scored if s['similarity'] > min_similarity][:top_k]
+    finally:
+        conn.close()
+
 # 전역 VectorStore 인스턴스
 vector_store = VectorStore()
 
@@ -279,7 +307,7 @@ def initialize_vector_store():
         total_patterns = vector_store.load_metadata()
         logger.info(f"총 {total_patterns}개의 패턴 메타데이터 로드 완료")
         
-        # 2. 벡터 상태 확인 및 생성
+        # 2. 패턴 벡터 상태 확인 및 생성
         conn = get_db_connection()
         try:
             with conn.cursor() as cursor:
@@ -361,26 +389,91 @@ def initialize_vector_store():
                         conn.commit()
                     
                     logger.info("벡터 처리 완료")
-                    return {
-                        'status': 'success',
-                        'message': f'총 {len(patterns)}개의 패턴 벡터 생성 완료',
-                        'total_patterns': len(patterns)
-                    }
                 else:
                     logger.info("갱신이 필요한 패턴이 없습니다.")
-                    return {
-                        'status': 'success',
-                        'message': '갱신이 필요한 패턴이 없습니다.',
-                        'total_patterns': 0
-                    }
         finally:
             conn.close()
+
+        # 3. 위젯 벡터 초기화 (widgets 테이블)
+        logger.info("위젯 벡터 초기화 시작")
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute('''
+                    SELECT id, name, description, category, component_name, thumbnail_url
+                    FROM widgets
+                    WHERE is_active = 1
+                    ORDER BY id ASC
+                ''')
+                widgets = cursor.fetchall()
+                if widgets:
+                    logger.info(f"총 {len(widgets)}개의 위젯 벡터 생성 시작")
+                    batch_size = 100
+                    batch_data = []
+                    for widget in tqdm(widgets, desc="위젯 벡터 생성"):
+                        try:
+                            # 이름+설명 임베딩
+                            text = f"{widget['name']} {widget['description']}"
+                            vector = model.encode(text).tolist()
+                            # 배치 데이터 추가 (widget_id, vector, name, description, vector_type, vector_status)
+                            batch_data.append((
+                                widget['id'],
+                                json.dumps(vector),
+                                widget['name'],
+                                widget['description'],
+                                'widget',
+                                'completed'
+                            ))
+                            if len(batch_data) >= batch_size:
+                                cursor.executemany('''
+                                    INSERT INTO vector_store 
+                                    (widget_id, vector, pattern_text, response, vector_type, vector_status)
+                                    VALUES (%s, %s, %s, %s, %s, %s)
+                                    ON DUPLICATE KEY UPDATE
+                                    vector = VALUES(vector),
+                                    pattern_text = VALUES(pattern_text),
+                                    response = VALUES(response),
+                                    vector_type = VALUES(vector_type),
+                                    vector_status = VALUES(vector_status)
+                                ''', batch_data)
+                                conn.commit()
+                                batch_data = []
+                        except Exception as e:
+                            logger.error(f"위젯 벡터 생성 실패 (widget_id: {widget['id']}): {str(e)}")
+                            continue
+                    # 남은 배치 데이터 처리
+                    if batch_data:
+                        cursor.executemany('''
+                            INSERT INTO vector_store 
+                            (widget_id, vector, pattern_text, response, vector_type, vector_status)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE
+                            vector = VALUES(vector),
+                            pattern_text = VALUES(pattern_text),
+                            response = VALUES(response),
+                            vector_type = VALUES(vector_type),
+                            vector_status = VALUES(vector_status)
+                        ''', batch_data)
+                        conn.commit()
+                    logger.info("위젯 벡터 처리 완료")
+                else:
+                    logger.info("벡터화할 위젯이 없습니다.")
+        finally:
+            conn.close()
+
+        return {
+            'status': 'success',
+            'message': '패턴/위젯 벡터 초기화 완료',
+            'total_patterns': total_patterns,
+            'total_widgets': len(widgets) if 'widgets' in locals() else 0
+        }
     except Exception as e:
         logger.error(f"벡터 스토어 초기화 중 오류 발생: {str(e)}")
         return {
             'status': 'error',
             'message': f'벡터 스토어 초기화 실패: {str(e)}',
-            'total_patterns': 0
+            'total_patterns': 0,
+            'total_widgets': 0
         }
 
 def validate_vector_store():
@@ -443,4 +536,8 @@ def log_vector_update(pattern_id, status, error=None):
             ''', (pattern_id, status, error))
             conn.commit()
     finally:
-        conn.close() 
+        conn.close()
+
+def get_embedding(text):
+    """입력 텍스트를 임베딩 벡터로 변환"""
+    return model.encode(text).tolist() 

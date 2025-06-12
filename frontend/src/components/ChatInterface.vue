@@ -29,9 +29,9 @@
                   @click="navigateTo(getRouteInfo(msg.route_code)?.route_path)"
                   class="action-button">
             {{ getRouteInfo(msg.route_code)?.route_name || '자세히 보기' }}
-          </button>
+            </button>
+          </div>
         </div>
-      </div>
       <!-- 로딩 애니메이션 -->
       <div v-if="isLoading" class="loading-indicator">
         <span class="spinner"></span> 조회중입니다...
@@ -39,12 +39,14 @@
     </div>
     <div class="chat-input">
       <input type="text"
-             v-model="userInput"
+        v-model="userInput" 
              ref="inputBox"
-             @keyup.enter="sendMessage"
-             placeholder="질문을 입력하세요..."
+        @keyup.enter="sendMessage"
+             :disabled="isLoading"
+             @keydown="handleInputKeydown"
+        placeholder="질문을 입력하세요..."
              class="message-input">
-      <button @click="sendMessage" class="send-button">전송</button>
+      <button @click="sendMessage" class="send-button" :disabled="isLoading">전송</button>
     </div>
     <div class="ai-guide-banner">
       <span class="ai-icon">🤖</span>
@@ -55,6 +57,7 @@
         <span class="dot"></span>
       </span>
     </div>
+    <div v-if="toastMessage" class="toast-message">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -72,7 +75,8 @@ export default {
       messages: [],
       userInput: '',
       isLoading: false,
-      routeList: []
+      routeList: [],
+      toastMessage: ''
     }
   },
   mounted() {
@@ -138,7 +142,14 @@ export default {
       }
     },
     async sendMessage() {
-      if (!this.userInput.trim()) return;
+      if (this.isLoading) {
+        this.showToast('현재 AI 가 활동중입니다. 잠시만 기다려 주세요');
+        return;
+      }
+      if (!this.userInput.trim()) {
+        this.showToast('질문 내용을 입력해 주세요');
+        return;
+      }
       this.messages.push({ type: 'user', content: this.userInput });
       const userMessage = this.userInput;
       this.userInput = '';
@@ -199,6 +210,23 @@ export default {
       this.$nextTick(() => {
         if (this.$refs.inputBox) this.$refs.inputBox.focus();
       });
+    },
+    handleInputKeydown(e) {
+      if (this.isLoading) {
+        this.showToast('현재 AI 가 활동중입니다. 잠시만 기다려 주세요');
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'Enter' && !this.userInput.trim()) {
+        this.showToast('질문 내용을 입력해 주세요');
+        e.preventDefault();
+      }
+    },
+    showToast(msg) {
+      this.toastMessage = msg;
+      setTimeout(() => {
+        this.toastMessage = '';
+      }, 1800);
     }
   },
   watch: {
@@ -437,5 +465,26 @@ export default {
 }
 .ai-message + .user-message {
   margin-top: 40px;
+}
+
+.toast-message {
+  position: fixed;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  background: #222;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 22px;
+  font-size: 1em;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  opacity: 0.95;
+  pointer-events: none;
+  animation: toast-fadein 0.2s;
+}
+@keyframes toast-fadein {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 0.95; transform: translateX(-50%) translateY(0); }
 }
 </style> 

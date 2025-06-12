@@ -319,3 +319,37 @@ INSERT INTO `sales_history` (year, month, sales, purchase, business_expense, net
 (2015, 12, 25000000, 15000000, 7500000, 2500000);
 -- (2016~2025년 데이터는 동일 패턴으로 추가, 실제 적용시 자동 생성 스크립트 활용 권장)
 UNLOCK TABLES;
+
+--
+-- Table structure for table `widgets`
+--
+
+DROP TABLE IF EXISTS `widgets`;
+CREATE TABLE `widgets` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '위젯 ID',
+  `name` varchar(100) NOT NULL COMMENT '위젯 이름',
+  `description` text COMMENT '위젯 설명',
+  `type` varchar(50) DEFAULT NULL COMMENT '위젯 유형(예: 차트, 통계, 대시보드 등)',
+  `category` varchar(50) DEFAULT NULL COMMENT '위젯 카테고리(예: 에너지, 게임, 통계 등)',
+  `thumbnail_url` varchar(255) DEFAULT NULL COMMENT '위젯 썸네일 이미지 URL',
+  `component_name` varchar(100) NOT NULL COMMENT '프론트엔드 컴포넌트명(Vue 등)',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '활성화 여부',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB COMMENT='화면에 배치되는 위젯 정보 테이블';
+
+--
+-- Table structure for table `widget_logs`
+--
+
+DROP TABLE IF EXISTS `widget_logs`;
+CREATE TABLE `widget_logs` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '로그 ID',
+  `user_id` int DEFAULT NULL COMMENT '사용자 ID',
+  `widget_id` int NOT NULL COMMENT '위젯 ID',
+  `action` varchar(20) NOT NULL COMMENT '동작(선택/삭제 등)',
+  `timestamp` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '동작 시각',
+  PRIMARY KEY (`id`),
+  KEY `widget_id` (`widget_id`)
+) ENGINE=InnoDB COMMENT='위젯 선택/삭제 등 사용자 동작 로그 테이블';

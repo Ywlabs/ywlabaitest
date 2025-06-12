@@ -40,15 +40,7 @@
 </template>
 
 <script>
-import axios from 'axios'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true
-});
+import api from '@/common/axios'
 
 // 날씨 아이콘 매핑 (OpenWeatherMap 기준)
 const weatherIconMap = {
