@@ -145,28 +145,54 @@ npm run dev
 
 ## 프로젝트 구조
 
+# 프로젝트 폴더 구조 및 공통 모듈 가이드 (2024-06 기준)
+
+## 1. 핵심 폴더 구조
+
 ```
-.
-├── backend/
-│   ├── app.py              # 애플리케이션 진입점
-│   ├── config.py           # 설정 파일
-│   ├── database.py         # 데이터베이스 연결
-│   ├── routes/             # API 라우트
-│   ├── services/           # 비즈니스 로직
-│   ├── models/             # 데이터베이스 모델
-│   ├── common/             # 공통 유틸리티
-│   └── tests/              # 테스트 코드
-├── frontend/
-│   ├── src/
-│   │   ├── components/     # React 컴포넌트
-│   │   ├── pages/         # 페이지 컴포넌트
-│   │   ├── services/      # API 서비스
-│   │   ├── store/         # Redux 스토어
-│   │   └── utils/         # 유틸리티 함수
-│   └── public/            # 정적 파일
-├── docs/                  # 문서
-└── README.md
+backend/
+├── core/
+│   ├── handlers/      # intent별 후처리 핸들러 함수/클래스 (핸들러 패턴)
+│   ├── embeddings/    # 임베딩 모델 래퍼 및 벡터 유틸 (HuggingFace/OpenAI 등)
+│   ├── utils/         # 범용 유틸리티 함수 (날짜, 문자열 등)
+│   ├── parsers/       # 파일/문서 파서(텍스트, PDF, 이미지 등)
+│   └── converters/    # 도메인별 Document 변환 함수
+├── services/          # 비즈니스 로직(서비스 계층)
+├── common/            # 로깅, 예외 등 공통 infra
+└── ...
 ```
+
+- 각 core 하위 폴더에는 반드시 `__init__.py`가 포함되어 패키지로 인식됩니다.
+- 서비스 레이어에서는 반드시 core 하위 모듈을 import해서 사용합니다.
+
+## 2. intent별 후처리 구조
+- intent별 후처리/DB조회/템플릿 로직은 core/handlers 하위의 핸들러 함수로 분리되어 있습니다.
+- intent가 추가될 때는 handler만 추가/수정하면 됩니다.
+- intent → handler 매핑은 `core/handlers/intent_handler_map.py`에서 관리합니다.
+
+## 3. 임베딩/유틸/파서/컨버터 구조
+- 임베딩 모델 래퍼(`get_hf_embedding`, `get_openai_embedding` 등)는 core/embeddings에 위치합니다.
+- 범용 유틸 함수는 core/utils, 도메인별 Document 변환 함수는 core/converters, 파일/문서 파서는 core/parsers에 위치합니다.
+
+## 4. 실무적 장점
+- 모든 공통 모듈이 core 하위에 일원화되어 확장성, 유지보수성, 협업 효율이 크게 향상됩니다.
+- 서비스 코드는 비즈니스 로직에만 집중할 수 있습니다.
+
+---
+
+### 예시: intent별 핸들러 패턴 사용
+
+```python
+from core.handlers.intent_handler_map import INTENT_HANDLER_MAP
+
+handler = INTENT_HANDLER_MAP.get(intent_tag)
+if handler:
+    return handler(user_message, meta, response)
+```
+
+---
+
+> 이 구조는 실무적 확장성과 유지보수성을 극대화하기 위해 설계되었습니다.
 
 ## API 문서
 

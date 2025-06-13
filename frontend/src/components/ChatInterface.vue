@@ -19,19 +19,19 @@
           <template v-else>
             <span v-html="renderMarkdown(msg.content)"></span>
           </template>
-          <!-- route_code가 있으면 getRouteInfo로 route_type 분기 -->
-          <button v-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'widget'"
+          <!-- route_type에 따라 버튼 분기 (routeList, getRouteInfo 의존성 제거) -->
+          <button v-if="msg.type === 'ai' && msg.route_type === 'widget'"
                   @click="showWidget(msg.route_code, msg)"
                   class="action-button">
-            {{ getRouteInfo(msg.route_code)?.route_name || '위젯 열기' }}
+            {{ msg.route_name || '위젯 열기' }}
           </button>
-          <button v-else-if="msg.type === 'ai' && msg.route_code && getRouteInfo(msg.route_code)?.route_type === 'link'"
-                  @click="navigateTo(getRouteInfo(msg.route_code)?.route_path)"
+          <button v-else-if="msg.type === 'ai' && msg.route_type === 'link'"
+                  @click="navigateTo(msg.route_path)"
                   class="action-button">
-            {{ getRouteInfo(msg.route_code)?.route_name || '자세히 보기' }}
-            </button>
-          </div>
+            {{ msg.route_name || '자세히 보기' }}
+          </button>
         </div>
+      </div>
       <!-- 로딩 애니메이션 -->
       <div v-if="isLoading" class="loading-indicator">
         <span class="spinner"></span> 조회중입니다...
@@ -75,12 +75,10 @@ export default {
       messages: [],
       userInput: '',
       isLoading: false,
-      routeList: [],
       toastMessage: ''
     }
   },
   mounted() {
-    this.loadRoutes();
     this.loadChatHistory();
     this.scrollToBottom();
   },
@@ -96,9 +94,6 @@ export default {
     },
     renderMarkdown(text) {
       return DOMPurify.sanitize(marked(text || ''));
-    },
-    getRouteInfo(route_code) {
-      return this.routeList.find(r => r.route_code === route_code);
     },
     async loadChatHistory() {
       try {
@@ -180,17 +175,6 @@ export default {
       } finally {
         this.isLoading = false;
         this.scrollToBottom();
-      }
-    },
-    async loadRoutes() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/routes`)
-        const res = await response.json()
-        if (res.data && res.status === 'success') {
-          this.routeList = res.data
-        }
-      } catch (e) {
-        this.routeList = []
       }
     },
     showWidget(route_code, msg = null) {

@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from services.chat_service import get_chat_history, get_popular_questions, save_chat_interaction, get_ai_response
-from services.vector_service import find_similar_question, model, vector_store
 from common.logger import setup_logger
 from database import get_db_connection
 import re
@@ -28,22 +27,17 @@ def chat():
             }), 400
         
         # 1. 벡터 검색으로 유사한 질문 찾기
-        try:
-            message_vector = model.encode(user_message)
-            similar_question = find_similar_question(message_vector)
-            logger.info(f"벡터 검색 결과: {similar_question}")
-        except Exception as e:
-            logger.error(f"벡터 검색 중 오류 발생: {str(e)}")
-            similar_question = None
-        
+        # (ChromaDB 기반으로 chat_service 내부에서 처리)
+        similar_question = None
         # AI 응답 생성 (DB 우선, 없으면 LLM)
-        response, similar_question = get_ai_response(user_message, similar_question, find_similar_question)
+        response, similar_question = get_ai_response(user_message, similar_question)
 
         # 2. 대화 기록 저장
+        intent_tag = similar_question['intent_tag'] if similar_question and 'intent_tag' in similar_question else None
         save_chat_interaction(
             user_message,
             response['data']['response'],
-            similar_question['intent_tag'],
+            intent_tag,
             response['data']['route_code'],
             response.get('data', {}).get('response_type', 'db'),  # response_source
             response.get('data', {}).get('response_time', None),  # response_time

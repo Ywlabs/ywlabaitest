@@ -1,74 +1,132 @@
 # backend/services/chroma_service.py
 
 # 한글 주석 포함
-from docx import Document
-from sentence_transformers import SentenceTransformer
-import chromadb
-from chromadb.config import Settings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain.schema import Document as LC_Document
+from docx import Document as DocxDocument
+from config import Config
 import os
 from tqdm import tqdm  # 진행률 표시를 위한 tqdm 추가
-from config import Config  # 공통 설정 import
+import glob
+import importlib
+from core.embeddings.hf_embedding import get_hf_embedding
 
-def initialize_chroma_from_docx(docx_path=None, chroma_dir=None, collection_name="policy_collection"):
+def initialize_rag_collections():
     """
-    워드(docx) 파일을 읽어 문단별로 임베딩 후 Chroma DB에 저장합니다.
-    chroma_dir와 docx_path는 config.py의 Config에서 기본값을 가져옵니다.
-    tqdm으로 진행률을 표시합니다.
+    Config.RAG_CHROMA_COLLECTIONS 기반으로 여러 문서/이미지/컬렉션을 일괄 초기화
+    (docx, pdf, image, 등 타입별 파서/임베딩/저장 구조)
+    glob 패턴이 path에 들어오면 모든 파일을 반복 처리
     """
-    # 경로 기본값 설정
-    if docx_path is None:
-        docx_path = Config.POLICY_DOCX_PATH
-    if chroma_dir is None:
-        chroma_dir = Config.CHROMA_DB_DIR
-
-    # 워드 파일에서 텍스트 추출
-    doc = Document(docx_path)
-    paragraphs = [para.text.strip() for para in doc.paragraphs if para.text.strip()]
-    if not paragraphs:
-        print("문서에 저장할 문단이 없습니다.")
-        return
-
-    # 임베딩 모델 로드
-    model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-    embeddings = model.encode(paragraphs).tolist()
-
-    # Chroma DB 인스턴스 생성 (경로 변경)
-    client = chromadb.Client(Settings(persist_directory=chroma_dir))
-    collection = client.get_or_create_collection(collection_name)
-
-    # 기존 데이터 삭제(초기화 목적)
-    all_ids = collection.get()['ids']
-    if all_ids:
-        collection.delete(ids=all_ids)  # 전체 데이터 안전 삭제
-
-    # tqdm으로 진행률 표시하며 문단별로 벡터와 메타데이터 저장
-    for idx, (text, embedding) in tqdm(enumerate(zip(paragraphs, embeddings)), total=len(paragraphs), desc="Chroma 저장 진행"):
-        collection.add(
-            ids=[f"para_{idx}"],
-            embeddings=[embedding],
-            documents=[text],
-            metadatas=[{
-                "source": os.path.basename(docx_path),
+    for item in Config.RAG_CHROMA_COLLECTIONS:
+        print(f"\n[초기화] {item['collection']} ({item['type']}) - {item['path']}")
+        docs = []
+        # 1. 파싱
+        if item["parser"] == "docx":
+            file_list = glob.glob(item["path"])
+            for file_path in file_list:
+                docx = DocxDocument(file_path)
+                paragraphs = [para.text.strip() for para in docx.paragraphs if para.text.strip()]
+                docs.extend([
+                    LC_Document(
+                        page_content=para,
+                        metadata={
+                            "source": os.path.basename(file_path),
                 "paragraph_index": idx
-            }]
+                        }
+                    )
+                    for idx, para in enumerate(paragraphs)
+                ])
+        elif item["parser"] == "pdf":
+            # TODO: PDF 파싱 구현 필요 (예: PyPDF2 등)
+            print("PDF 파싱은 아직 미구현입니다.")
+            docs = []
+        elif item["parser"] == "image_ocr":
+            # TODO: 이미지 OCR 파싱 구현 필요 (예: pytesseract 등)
+            print("이미지 OCR 파싱은 아직 미구현입니다.")
+            docs = []
+        else:
+            print(f"알 수 없는 parser: {item['parser']}")
+            docs = []
+        if not docs:
+            print("저장할 문서가 없습니다.")
+            continue
+        # 2. 임베딩 모델
+        embeddings = get_hf_embedding(item["embedding_model"])
+        # 3. Chroma 컬렉션에 저장
+        vector_store = Chroma(
+            persist_directory=Config.RAG_CHROMA_DIR,
+            collection_name=item["collection"],
+            embedding_function=embeddings
         )
-    print(f"Chroma DB에 {len(paragraphs)}개 문단 저장 완료.")
+        vector_store.add_documents(docs)
+        print(f"✓ {item['collection']}에 {len(docs)}개 문서/문단 임베딩 저장 완료.")
 
-def get_similar_context_from_chroma(query, chroma_dir=None, collection_name="policy_collection", top_k=3):
+# DB 기반 컬렉션 초기화 함수
+def get_func_from_str(func_path):
     """
-    Chroma DB에서 질문(query)과 유사한 정책/가이드 문단을 top_k개 검색하여 텍스트로 반환합니다.
-    chroma_dir는 config.py의 기본값을 사용합니다.
+    'services.widget_service.get_all_widgets' → 실제 함수 객체 반환
     """
-    if chroma_dir is None:
-        from config import Config
-        chroma_dir = Config.CHROMA_DB_DIR
-    client = chromadb.Client(Settings(persist_directory=chroma_dir))
-    collection = client.get_or_create_collection(collection_name)
-    # 임베딩 모델 로드 (최적화 위해 전역화 가능)
-    model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-    query_embedding = model.encode([query]).tolist()
-    results = collection.query(query_embeddings=query_embedding, n_results=top_k)
-    # 검색된 문단을 한글 주석과 함께 텍스트로 합침
-    context_list = results.get('documents', [[]])[0]
-    context_text = '\n'.join(context_list)
-    return context_text 
+    module_path, func_name = func_path.rsplit('.', 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, func_name)
+
+def initialize_db_collections():
+    """
+    Config.DB_CHROMA_COLLECTIONS 기반으로 DB 컬렉션별 임베딩 일괄 저장
+    """
+    for item in Config.DB_CHROMA_COLLECTIONS:
+        print(f"\n[DB초기화] {item['collection']} ({item['type']})")
+        get_all_func = get_func_from_str(item["get_all_func"])
+        to_doc_func = get_func_from_str(item["to_doc_func"])
+        records = get_all_func()
+        docs = [to_doc_func(r) for r in records]
+        if not docs:
+            print("저장할 문서가 없습니다.")
+            continue
+        embeddings = get_hf_embedding(item["embedding_model"])
+        vector_store = Chroma(
+            persist_directory=Config.RAG_CHROMA_DIR,
+            collection_name=item["collection"],
+            embedding_function=embeddings
+        )
+        vector_store.add_documents(docs)
+        print(f"✓ {item['collection']}에 {len(docs)}개 DB 임베딩 저장 완료.")
+
+def search_similar_in_collection(collection_name: str, query: str, top_k: int = 10):
+    """
+    DB_CHROMA_COLLECTIONS의 지정 컬렉션에서 쿼리로 유사 문서 검색
+    """
+    # config에서 해당 컬렉션 정보 찾기
+    item = next((c for c in Config.DB_CHROMA_COLLECTIONS if c["collection"] == collection_name), None)
+    if not item:
+        print(f"[search_similar_in_collection] 컬렉션 {collection_name} 설정을 찾을 수 없습니다.")
+        return []
+    embeddings = get_hf_embedding(item["embedding_model"])
+    vector_store = Chroma(
+        persist_directory=Config.RAG_CHROMA_DIR,
+        collection_name=collection_name,
+        embedding_function=embeddings
+    )
+    docs = vector_store.similarity_search(query, k=top_k)
+    # 검색된 문서의 metadata 전체를 로그로 출력
+    for idx, doc in enumerate(docs):
+        print(f"[ChromaDB 검색결과] #{idx+1} metadata: {doc.metadata}")
+    return docs
+
+def get_similar_context_from_chroma(query: str, top_k: int = 3):
+    """
+    RAG_CHROMA_COLLECTIONS에 정의된 모든 컬렉션에서 쿼리로 유사 문단/문서(top_k개)를 찾아 리스트로 반환
+    (문서/이미지 등 비정형 데이터 RAG 컨텍스트 전용)
+    """
+    results = []
+    for item in Config.RAG_CHROMA_COLLECTIONS:
+        embeddings = get_hf_embedding(item["embedding_model"])
+        vector_store = Chroma(
+            persist_directory=Config.RAG_CHROMA_DIR,
+            collection_name=item["collection"],
+            embedding_function=embeddings
+        )
+        docs = vector_store.similarity_search(query, k=top_k)
+        results.extend(docs)
+    return results 

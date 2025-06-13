@@ -1,5 +1,5 @@
 from services.chat_service import get_ai_response
-from services.vector_service import model, find_similar_widget, vector_store
+from core.converters.widget_converter import widget_to_document
 from common.logger import setup_logger
 from database import get_db_connection
 import re
@@ -35,43 +35,36 @@ def is_all_widget_query(query):
             return True
     return False
 
+def get_widgets_by_ids(widget_ids):
+    if not widget_ids:
+        return []
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            format_strings = ','.join(['%s'] * len(widget_ids))
+            cursor.execute(f'''
+                SELECT id, name, description, category, component_name, thumbnail_url
+                FROM widgets
+                WHERE is_active = 1 AND id IN ({format_strings})
+                ORDER BY FIELD(id, {format_strings})
+            ''', tuple(widget_ids)*2)
+            widgets = cursor.fetchall()
+            return widgets
+    finally:
+        conn.close()
+
 def search_widgets(query):
     try:
         logger.info(f"[search_widgets] 입력 쿼리: {query}")
         if is_all_widget_query(query):
             return get_all_widgets()
-
-        # 콤마로 분리된 다중 키워드 처리
-        keywords = [q.strip() for q in query.split(',') if q.strip()]
-        all_widget_ids = set()
-        for kw in keywords:
-            message_vector = model.encode(kw)
-            similar_results = find_similar_widget(message_vector, top_k=10)
-            if similar_results:
-                if isinstance(similar_results, dict):
-                    similar_results = [similar_results]
-                for r in similar_results:
-                    if r.get('widget_id'):
-                        all_widget_ids.add(r['widget_id'])
-        logger.info(f"[search_widgets] 다중 키워드 기반 widget_ids: {all_widget_ids}")
-        if all_widget_ids:
-            conn = get_db_connection()
-            try:
-                with conn.cursor() as cursor:
-                    format_strings = ','.join(['%s'] * len(all_widget_ids))
-                    cursor.execute(f'''
-                        SELECT id, name, description, category, component_name, thumbnail_url
-                        FROM widgets
-                        WHERE is_active = 1 AND id IN ({format_strings})
-                        ORDER BY FIELD(id, {format_strings})
-                    ''', tuple(all_widget_ids)*2)
-                    widgets = cursor.fetchall()
-                    logger.info(f"[search_widgets] 다중 키워드 기반 최종 반환 개수: {len(widgets)}")
-                    if widgets:
-                        return widgets
-            finally:
-                conn.close()
-        # 결과 없으면 전체 위젯 반환
+        # DB_CHROMA_COLLECTIONS 기반 벡터 검색
+        from services.chroma_service import search_similar_in_collection
+        docs = search_similar_in_collection("widget", query, top_k=10)
+        widget_ids = [doc.metadata["widget_id"] for doc in docs]
+        logger.info(f"[search_widgets] chroma_service 기반 widget_ids: {widget_ids}")
+        if widget_ids:
+            return get_widgets_by_ids(widget_ids)
         return get_all_widgets()
     except Exception as e:
         logger.error(f"search_widgets error: {str(e)}")
@@ -104,10 +97,4 @@ def upsert_widget(widget):
             conn.commit()
     finally:
         conn.close()
-    # 임베딩 생성 및 vector_store에 저장
-    embedding = get_embedding(widget['description'] + widget['name'])
-    vector_store.upsert(widget['id'], embedding)
-
-def get_embedding(text):
-    """입력 텍스트를 임베딩 벡터로 변환"""
-    return model.encode(text).tolist() 
+    # 벡터스토어 동기화 코드 제거 (chroma_service.py에서 일괄 처리) 
