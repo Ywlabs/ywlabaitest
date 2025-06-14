@@ -108,6 +108,8 @@ config.local.py
 
 # 가상환경
 venv/
+backend/venv/   
+*/venv/
 .env
 .env.*
 
@@ -142,3 +144,4 @@ dist/
 
 # 기타
 node_modules/ 
+*/node_modules/

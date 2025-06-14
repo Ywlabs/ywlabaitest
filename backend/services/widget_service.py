@@ -54,13 +54,18 @@ def get_widgets_by_ids(widget_ids):
         conn.close()
 
 def search_widgets(query):
+    """
+    위젯 검색 함수
+    - 2024-06-14 기준: widget_collection에서만 검색
+    - 절대 다른 컬렉션(chatbot_collection, policy_collection 등)을 사용하지 말 것!
+    """
     try:
         logger.info(f"[search_widgets] 입력 쿼리: {query}")
         if is_all_widget_query(query):
             return get_all_widgets()
-        # DB_CHROMA_COLLECTIONS 기반 벡터 검색
+        # DB_CHROMA_COLLECTIONS 기반 벡터 검색 (widget_collection 사용)
         from services.chroma_service import search_similar_in_collection
-        docs = search_similar_in_collection("widget", query, top_k=10)
+        docs = search_similar_in_collection("widget_collection", query, top_k=10)
         widget_ids = [doc.metadata["widget_id"] for doc in docs]
         logger.info(f"[search_widgets] chroma_service 기반 widget_ids: {widget_ids}")
         if widget_ids:

@@ -4,7 +4,7 @@
       <div v-for="(msg, idx) in messages" :key="idx" :class="[msg.type === 'user' ? 'user-message' : 'ai-message']">
         <div class="message-content">
           <!-- AI 메시지이면서 직원 정보가 구조화되어 있으면 표로 출력 -->
-          <template v-if="msg.type === 'ai' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
+          <template v-if="msg.type === 'db' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
             <table class="employee-table">
               <tbody>
                 <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
@@ -20,15 +20,15 @@
             <span v-html="renderMarkdown(msg.content)"></span>
           </template>
           <!-- route_type에 따라 버튼 분기 (routeList, getRouteInfo 의존성 제거) -->
-          <button v-if="msg.type === 'ai' && msg.route_type === 'widget'"
+          <button v-if="msg.route_code && msg.route_type === 'widget'"
                   @click="showWidget(msg.route_code, msg)"
                   class="action-button">
-            {{ msg.route_name || '위젯 열기' }}
+            {{ msg.button_text || '위젯 열기' }}
           </button>
-          <button v-else-if="msg.type === 'ai' && msg.route_type === 'link'"
-                  @click="navigateTo(msg.route_path)"
+          <button v-else-if="msg.target_url && msg.route_type === 'link'"
+                  @click="navigateTo(msg.target_url)"
                   class="action-button">
-            {{ msg.route_name || '자세히 보기' }}
+            {{ msg.button_text || '자세히 보기' }}
           </button>
         </div>
       </div>
@@ -99,7 +99,8 @@ export default {
       try {
         const response = await fetch(`${API_BASE_URL}/api/chat/history`)
         const res = await response.json()
-        if (res.status === 'success' && Array.isArray(res.data)) {
+
+        if (Array.isArray(res.data)) {
           const history = [...res.data].reverse();
           const formattedHistory = history.flatMap(item => {
             const arr = [];

@@ -83,14 +83,16 @@ import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
 import api from '@/common/axios'
-import { markRaw } from 'vue'
+import { markRaw, defineAsyncComponent } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+
+const ENERGY_WIDGET = defineAsyncComponent(() => import('@/widgets/DashboardWidgetGrid.vue'))
 
 const widgetMap = {
   ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
   SALES_WIDGET: () => import('@/widgets/SalesWidget.vue'),
-  DASHBOARD_WIDGET: () => import('@/widgets/energy/DashboardWidgetGrid.vue'),
+  DASHBOARD_WIDGET: () => ENERGY_WIDGET,
   // 앞으로 추가될 위젯은 Widget 네이밍 사용
 }
 

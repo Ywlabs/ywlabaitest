@@ -57,7 +57,6 @@ DROP TABLE IF EXISTS `patterns`;
 CREATE TABLE `patterns` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '패턴 ID',
   `pattern` text NOT NULL COMMENT '패턴 텍스트',
-  `intent_tag` varchar(50) NOT NULL COMMENT '연관된 인텐트 태그',
   `pattern_type` varchar(20) NOT NULL DEFAULT 'static' COMMENT '패턴 유형 (static/dynamic)',
   `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '활성화 여부',
   `priority` int NOT NULL DEFAULT 0 COMMENT '우선순위',
@@ -65,9 +64,12 @@ CREATE TABLE `patterns` (
   `description` varchar(255) DEFAULT NULL COMMENT '패턴 설명',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+  `domain` varchar(50) NOT NULL DEFAULT 'general' COMMENT '도메인 분류 (예: 인사, 연차, 매출 등)',
+  `category` varchar(50) NOT NULL DEFAULT 'general' COMMENT '카테고리 분류 (예: 조회, 신청, 안내 등)',
+  `similarity_threshold` float NOT NULL DEFAULT 0.7 COMMENT '유사도 검색 임계값',
   PRIMARY KEY (`id`),
-  KEY `intent_tag` (`intent_tag`),
-  KEY `response_id` (`response_id`)
+  KEY `response_id` (`response_id`),
+  KEY `idx_domain_category` (`domain`, `category`)
 ) ENGINE=InnoDB COMMENT='패턴 매칭 테이블';
 
 --
@@ -75,26 +77,26 @@ CREATE TABLE `patterns` (
 --
 
 LOCK TABLES `patterns` WRITE;
-INSERT INTO `patterns` (pattern, intent_tag, pattern_type, priority, response_id, description) VALUES 
-('안녕하세요','greeting', 'static', 0, 1, '기본 인사 패턴'),
-('조직도','organization', 'static', 0, 2, '조직도 조회 패턴'),
-('휴가','vacation', 'static', 0, 3, '휴가 조회 패턴'),
-('ESG','esg', 'static', 0, 4, 'ESG 조회 패턴'),
-('준법','compliance', 'static', 0, 5, '준법 조회 패턴'),
-('회사 소개','about', 'static', 20, 6, '회사 소개 명확 패턴'),
-('회사 연혁','history', 'static', 0, 7, '회사 연혁 조회 패턴'),
-('비전','vision', 'static', 0, 8, '비전 조회 패턴'),
-('오시는 길','location', 'static', 0, 9, '오시는 길 조회 패턴'),
-('문의','contact', 'static', 0, 10, '문의 조회 패턴'),
-('영우랩스 {name} 정보','employee_info', 'dynamic', 10, 11, '직원 정보 조회 패턴 (회사명 포함)'),
-('{name} 정보', 'employee_info', 'dynamic', 2, 11, '직원 정보 조회 패턴 (이름만)'),
-('ESG 경영정보', 'esg_info', 'static', 0, 12, 'ESG 경영 정보 패턴'),
-('영우랩스 {year}년 매출', 'sales_status', 'dynamic', 10, NULL, '연도별 매출 동적 패턴'),
-('{year}년 매출', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
-('{year}년 매출 알려줘', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
-('{year}년 매출현황', 'sales_status', 'dynamic', 8, NULL, '연도별 매출 동적 패턴'),
-('올해 매출', 'sales_status', 'dynamic', 5, NULL, '올해 매출 동적 패턴'),
-('작년 매출', 'sales_status', 'dynamic', 5, NULL, '작년 매출 동적 패턴');
+INSERT INTO `patterns` (pattern, pattern_type, priority, description, domain, category, similarity_threshold) VALUES 
+('안녕하세요','static', 0, '기본 인사 패턴', '인사', '일반', 0.7),
+('조직도','static', 0, '조직도 조회 패턴', '조직', '조회', 0.8),
+('휴가','static', 0, '휴가 조회 패턴', '인사', '휴가', 0.8),
+('ESG','static', 0, 'ESG 조회 패턴', 'ESG', '조회', 0.8),
+('준법','static', 0, '준법 조회 패턴', '준법', '조회', 0.8),
+('회사 소개','static', 20, '회사 소개 명확 패턴', '회사', '소개', 0.8),
+('회사 연혁','static', 0, '회사 연혁 조회 패턴', '회사', '연혁', 0.8),
+('비전','static', 0, '비전 조회 패턴', '회사', '비전', 0.8),
+('오시는 길','static', 0, '오시는 길 조회 패턴', '회사', '위치', 0.8),
+('문의','static', 0, '문의 조회 패턴', '문의', '일반', 0.7),
+('영우랩스 {name} 정보','dynamic', 10, '직원 정보 조회 패턴 (회사명 포함)', '인사', '직원', 0.9),
+('{name} 정보', 'dynamic', 2, '직원 정보 조회 패턴 (이름만)', '인사', '직원', 0.9),
+('ESG 경영정보', 'static', 0, 'ESG 경영 정보 패턴', 'ESG', '경영', 0.8),
+('영우랩스 {year}년 매출', 'dynamic', 10, '연도별 매출 동적 패턴', '매출', '조회', 0.9),
+('{year}년 매출', 'dynamic', 8, '연도별 매출 동적 패턴', '매출', '조회', 0.9),
+('{year}년 매출 알려줘', 'dynamic', 8, '연도별 매출 동적 패턴', '매출', '조회', 0.9),
+('{year}년 매출현황', 'dynamic', 8, '연도별 매출 동적 패턴', '매출', '조회', 0.9),
+('올해 매출', 'dynamic', 5, '올해 매출 동적 패턴', '매출', '조회', 0.9),
+('작년 매출', 'dynamic', 5, '작년 매출 동적 패턴', '매출', '조회', 0.9);
 UNLOCK TABLES;
 
 --
@@ -104,7 +106,6 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `responses`;
 CREATE TABLE `responses` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '응답 ID',
-  `intent_tag` varchar(50) NOT NULL COMMENT '연관된 인텐트 태그',
   `response` text NOT NULL COMMENT '응답 텍스트',
   `response_type` varchar(20) NOT NULL DEFAULT 'text' COMMENT '응답 데이터 유형 (text: 일반 텍스트, dynamic: 동적 텍스트 등, UI 유형은 route_code로 분기)',
   `template_variables` text DEFAULT NULL COMMENT '동적응답 변수',
@@ -115,7 +116,6 @@ CREATE TABLE `responses` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
   PRIMARY KEY (`id`),
-  KEY `intent_tag` (`intent_tag`),
   KEY `route_code` (`route_code`)
 ) ENGINE=InnoDB COMMENT='응답 템플릿 테이블';
 
@@ -124,20 +124,20 @@ CREATE TABLE `responses` (
 --
 
 LOCK TABLES `responses` WRITE;
-INSERT INTO `responses` (intent_tag, response, response_type, priority, description, route_code) VALUES 
-('greeting', '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?', 'text', 0, '기본 인사 응답', NULL),
-('organization', '조직도를 확인하시겠습니까?', 'text', 0, '조직도 조회 응답', 'ORG_CHART'),
-('vacation', '휴가 정보를 확인하시겠습니까?', 'text', 0, '휴가 조회 응답', 'VAC_CAL'),
-('esg', 'ESG 경영 정보를 확인하시겠습니까?', 'text', 0, 'ESG 조회 응답', 'ESG_INFO'),
-('compliance', '준법경영 정보를 확인하시겠습니까?', 'text', 0, '준법 조회 응답', 'CMP_INFO'),
-('about', '회사 소개 페이지로 이동하시겠습니까?', 'text', 0, '회사 소개 응답', 'ABOUT'),
-('history', '회사 연혁 페이지로 이동하시겠습니까?', 'text', 0, '회사 연혁 응답', 'HISTORY'),
-('vision', '비전과 미션 페이지로 이동하시겠습니까?', 'text', 0, '비전과 미션 응답', 'VISION'),
-('location', '오시는 길 페이지로 이동하시겠습니까?', 'text', 0, '오시는 길 응답', 'LOCATION'),
-('contact', '문의하기 페이지로 이동하시겠습니까?', 'text', 0, '문의하기 응답', 'CONTACT'),
-('employee_info', '{employee.name}님의 정보입니다:\n직책: {employee.position}\n부서: {employee.dept_nm}\n이메일: {employee.email}\n연락처: {employee.phone}', 'dynamic', 0, '직원 정보 동적 응답', NULL),
-('esg_info', 'ESG 경영 정보를 안내해드릴까요?', 'text', 0, 'ESG 경영 정보 응답', 'ESG_INFO'),
-('sales_status', '매출 위젯으로 이동합니다.', 'text', 0, '연도별 매출 위젯 응답', 'SALES_WIDGET');
+INSERT INTO `responses` (response, response_type, priority, description, route_code) VALUES 
+('안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?', 'text', 0, '기본 인사 응답', NULL),
+('조직도를 확인하시겠습니까?', 'text', 0, '조직도 조회 응답', 'ORG_CHART'),
+('휴가 정보를 확인하시겠습니까?', 'text', 0, '휴가 조회 응답', 'VAC_CAL'),
+('ESG 경영 정보를 확인하시겠습니까?', 'text', 0, 'ESG 조회 응답', 'ESG_INFO'),
+('준법경영 정보를 확인하시겠습니까?', 'text', 0, '준법 조회 응답', 'CMP_INFO'),
+('회사 소개 페이지로 이동하시겠습니까?', 'text', 0, '회사 소개 응답', 'ABOUT'),
+('회사 연혁 페이지로 이동하시겠습니까?', 'text', 0, '회사 연혁 응답', 'HISTORY'),
+('비전과 미션 페이지로 이동하시겠습니까?', 'text', 0, '비전과 미션 응답', 'VISION'),
+('오시는 길 페이지로 이동하시겠습니까?', 'text', 0, '오시는 길 응답', 'LOCATION'),
+('문의하기 페이지로 이동하시겠습니까?', 'text', 0, '문의하기 응답', 'CONTACT'),
+('{employee.name}님의 정보입니다:\n직책: {employee.position}\n부서: {employee.dept_nm}\n이메일: {employee.email}\n연락처: {employee.phone}', 'dynamic', 0, '직원 정보 동적 응답', NULL),
+('ESG 경영 정보를 안내해드릴까요?', 'text', 0, 'ESG 경영 정보 응답', 'ESG_INFO'),
+('매출 위젯으로 이동합니다.', 'text', 0, '연도별 매출 위젯 응답', 'SALES_WIDGET');
 UNLOCK TABLES;
 
 --
@@ -353,3 +353,53 @@ CREATE TABLE `widget_logs` (
   PRIMARY KEY (`id`),
   KEY `widget_id` (`widget_id`)
 ) ENGINE=InnoDB COMMENT='위젯 선택/삭제 등 사용자 동작 로그 테이블';
+
+
+-- 2024-06-14: patterns 테이블 변경 (도메인/카테고리 기반 검색 강화 및 유사도 임계값 조정)
+ALTER TABLE patterns
+ADD COLUMN domain VARCHAR(50) NOT NULL DEFAULT 'general' COMMENT '도메인 분류 (예: 인사, 연차, 매출 등)',
+ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'general' COMMENT '카테고리 분류 (예: 조회, 신청, 안내 등)',
+ADD COLUMN similarity_threshold FLOAT NOT NULL DEFAULT 0.7 COMMENT '유사도 검색 임계값',
+ADD INDEX idx_domain_category (domain, category);
+
+-- 2024-06-14: intents 테이블의 데이터를 patterns 테이블의 domain으로 마이그레이션
+UPDATE patterns p
+JOIN intents i ON p.intent_tag = i.tag
+SET p.domain = i.tag
+WHERE p.intent_tag IS NOT NULL;
+
+-- 2024-06-14: patterns 테이블에서 intent_tag 컬럼 제거
+ALTER TABLE patterns
+DROP COLUMN intent_tag,
+DROP INDEX intent_tag;
+
+-- 2024-06-14: patterns_responses 테이블 생성 (N:M 관계 구현)
+CREATE TABLE patterns_responses (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT 'ID',
+    pattern_id INT NOT NULL COMMENT '패턴 ID',
+    response_id INT NOT NULL COMMENT '응답 ID',
+    priority INT NOT NULL DEFAULT 0 COMMENT '응답 우선순위',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE COMMENT '활성화 여부',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성일시',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일시',
+    INDEX idx_pattern_id (pattern_id),
+    INDEX idx_response_id (response_id),
+    INDEX idx_is_active (is_active)
+) ENGINE=InnoDB COMMENT '패턴과 응답의 N:M 관계 테이블';
+
+-- 2024-06-14: 기존 patterns-response 관계를 patterns_responses 테이블로 마이그레이션
+INSERT INTO patterns_responses (pattern_id, response_id, priority, is_active)
+SELECT id, response_id, priority, is_active
+FROM patterns
+WHERE response_id IS NOT NULL;
+
+-- 2024-06-14: responses 테이블에서 intent_tag 컬럼 제거
+ALTER TABLE responses
+DROP COLUMN intent_tag;
+
+-- 2024-06-14: patterns 테이블에서 response_id 컬럼 제거
+ALTER TABLE patterns
+DROP COLUMN response_id;
+
+-- 2024-06-14: intents 테이블 제거 (domain, category 기반으로 변경)
+DROP TABLE IF EXISTS intents;

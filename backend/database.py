@@ -1,6 +1,10 @@
 import pymysql
 import os
 from dotenv import load_dotenv
+import logging
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -17,27 +21,12 @@ def get_db_connection():
     )
 
 def init_db():
-    conn = get_db_connection()
-    cur = conn.cursor()
-
+    """데이터베이스 초기화"""
     try:
-        # schema.sql 파일 읽기
-        with open('schema.sql', 'r', encoding='utf-8') as f:
-            sql_script = f.read()
-        
-        # SQL 문을 세미콜론(;)으로 분리
-        sql_statements = sql_script.split(';')
-        
-        # 각 SQL 문 실행
-        for statement in sql_statements:
-            # 빈 문장이나 주석만 있는 경우 스킵
-            if statement.strip() and not statement.strip().startswith('--'):
-                cur.execute(statement)
-        
-        conn.commit()
+        connection = get_db_connection()
+        if connection:
+            logger.info("[DB] 데이터베이스 연결 성공")
+            connection.close()
     except Exception as e:
-        print(f"Error initializing database: {str(e)}")
-        conn.rollback()
+        logger.error(f"[DB] 초기화 중 오류 발생: {str(e)}")
         raise
-    finally:
-        conn.close() 

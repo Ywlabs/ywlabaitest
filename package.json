@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "@lottiefiles/lottie-player": "^2.0.12",
-    "chart.js": "^4.4.9",
-    "dompurify": "^3.2.6",
-    "vue-toastification": "^2.0.0-rc.5"
-  }
-}

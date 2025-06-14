@@ -1,88 +1,90 @@
+import os
+import sys
+import time
+import logging
 from flask import Flask
 from flask_cors import CORS
-from routes.chat_routes import chat_bp, routes_bp
+from routes.chat_routes import chat_bp
 from routes.employee_routes import employee_bp
+from routes.sales_routes import sales_bp
+from routes.widget_routes import widget_bp
 from routes.legacy_routes import legacy_bp
-from routes.sales_routes import sales_bp  # 매출 API 블루프린트 추가
-from routes.widget_routes import widget_bp  
+from routes.routes import routes_bp
 from common.logger import setup_logger
-import threading
-from services.chroma_service import initialize_rag_collections, initialize_db_collections
-from config import Config  # 공통 설정 import
-import os
+from database import init_db
+from services.chroma_service import initialize_collections
+from config import get_config
 import shutil
 
-# 로거 설정
-logger = setup_logger('app')
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_app():
+    """Flask 애플리케이션 생성"""
     app = Flask(__name__)
-    # CORS는 app 단위로만 적용 (Blueprint에는 적용하지 않음)
+    
+    # 설정 로드
+    app.config.from_object(get_config())
+    
+    # CORS 설정 - 2024-06-14 기준 전체 허용으로 설정. 절대 수정하지 말 것!
     CORS(app, resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:3000",
-                "http://127.0.0.1:3000"
-            ],
-            "methods": ["GET", "POST", "OPTIONS"],
+        r"/*": {
+            "origins": "*",  # 2024-06-14 기준 전체 허용. 절대 수정하지 말 것!
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True
         }
     })
+    
+    # 데이터베이스 초기화
+    init_db()
+    
+    # ChromaDB 초기화
+    try:
+        # 1. ChromaDB 디렉토리 초기화
+        chroma_dir = app.config['RAG_CHROMA_DIR']
+        if os.path.exists(chroma_dir):
+            shutil.rmtree(chroma_dir)
+        os.makedirs(chroma_dir, exist_ok=True)
+        logger.info(f"[ChromaDB] 디렉토리 초기화 완료: {chroma_dir}")
+        
+        # 2. 컬렉션 초기화 (DB -> RAG 순서)
+        initialize_collections()
+        logger.info("[ChromaDB] 모든 컬렉션 초기화 완료")
+        
+    except Exception as e:
+        logger.error(f"[ChromaDB] 초기화 중 오류 발생: {str(e)}")
+        # ChromaDB 초기화 실패 시에도 앱은 계속 실행
+        logger.warning("[ChromaDB] 초기화 실패로 인해 벡터 검색 기능이 제한될 수 있습니다.")
+    
     # 블루프린트 등록
     app.register_blueprint(chat_bp)
     app.register_blueprint(employee_bp)
-    app.register_blueprint(routes_bp)  # routes API 블루프린트 등록
-    app.register_blueprint(legacy_bp)  # legacy API 블루프린트 등록
-    app.register_blueprint(sales_bp)   # 매출 API 블루프린트 등록
-    app.register_blueprint(widget_bp)  # 위젯 API 블루프린트 등록
+    app.register_blueprint(sales_bp)
+    app.register_blueprint(widget_bp)
+    app.register_blueprint(legacy_bp)
+    app.register_blueprint(routes_bp)
+    
     return app
 
-app = create_app()
-
-def initialize_backend():
-    """
-    백엔드 및 ChromaDB(문서/DB) 일괄 초기화
-    - chromadb 폴더가 없으면 자동으로 새로 생성됩니다.
-    - 이미 존재하는 경우 기존 데이터를 덮어쓸 수 있습니다.
-    - 완전히 새로 생성하려면 chromadb 폴더를 수동으로 삭제 후 서버를 재시작하세요.
-    """
-    chroma_dir = Config.RAG_CHROMA_DIR
-    print("\n=== 백엔드 및 ChromaDB 초기화 시작 ===")
-    print(f"[안내] ChromaDB(문서/DB) 벡터DB 경로: {chroma_dir}")
-    if os.path.exists(chroma_dir):
-        print(f"[경고] chromadb 폴더({chroma_dir})가 이미 존재합니다.")
-        answer = input("기존 chromadb 폴더를 삭제하고 새로 생성하시겠습니까? (Y/N): ").strip().lower()
-        if answer == 'y':
-            try:
-                shutil.rmtree(chroma_dir)
-                print(f"[완료] chromadb 폴더({chroma_dir})가 삭제되었습니다.")
-            except Exception as e:
-                print(f"[오류] chromadb 폴더 삭제 실패: {e}")
-                print("[중단] 초기화를 진행하지 않습니다.")
-                return
-        else:
-            print("[안내] 기존 chromadb 폴더를 유지하고 초기화를 진행합니다.")
-    else:
-        print("[안내] chromadb 폴더가 존재하지 않아 새로 생성됩니다.")
-    # 1. RAG 문서/이미지 ChromaDB 초기화
-    print("1. RAG 문서/이미지 일괄 초기화 중...")
-    try:
-        initialize_rag_collections()
-        print("[완료] RAG 문서/이미지 컬렉션 초기화 완료.")
-    except Exception as e:
-        print(f"⚠ RAG 문서/이미지 초기화 실패: {e}")
-    # 2. DB 기반 ChromaDB 초기화
-    print("2. DB 컬렉션 일괄 초기화 중...")
-    try:
-        initialize_db_collections()
-        print("[완료] DB 컬렉션 초기화 완료.")
-    except Exception as e:
-        print(f"⚠ DB 컬렉션 초기화 실패: {e}")
-    print("\n=== 백엔드 및 ChromaDB 초기화 완료 ===\n")
-
 if __name__ == '__main__':
-    initialize_backend()
-    app.run(debug=True, port=5000, host='0.0.0.0')  # host를 0.0.0.0으로 변경하여 모든 IP에서 접근 가능하도록 함 
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.INFO)  # INFO 레벨까지 표시
+    
+    # 로깅 포맷 설정
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    app = create_app()
+    
+    # 블루프린트 등록 상태 로깅
+    logger.info("등록된 블루프린트:")
+    for rule in app.url_map.iter_rules():
+        logger.info(f"  {rule.endpoint}: {rule.rule}")
+    
+    logger.info("Flask 서버 시작: http://0.0.0.0:5000")
+    app.run(host='0.0.0.0', port=5000, debug=True) 
