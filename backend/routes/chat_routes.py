@@ -34,7 +34,7 @@ def chat():
             response.get('response', '응답을 생성할 수 없습니다.'),  # 기본값 설정
             response.get('pattern_type'),
             response.get('route_code'),
-            response.get('type'),
+            response.get('response_type'),
             None,  # response_time
             response  # 전체 응답 JSON 저장
         )

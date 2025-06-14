@@ -44,42 +44,39 @@ def create_response(
     response: str,
     response_type: str = "text",
     route_code: Optional[str] = None,
-    target_url: Optional[str] = None,
-    button_text: Optional[str] = None,
+    route_type: Optional[str] = None,
+    route_name: Optional[str] = None,
+    route_path: Optional[str] = None,
     employee: Optional[Dict] = None,
-    metadata: Optional[Dict] = None,
-    route_type: Optional[str] = None
+    metadata: Optional[Dict] = None
 ) -> Dict[str, Any]:
     """
     응답 생성 함수
     - response: 사용자에게 보여줄 응답 메시지
     - response_type: 응답 타입 (text, dynamic)
     - route_code: 라우팅 코드
-    - target_url: 이동할 URL
-    - button_text: 버튼 텍스트
+    - route_type: 라우트타입
+    - route_name: 라우트이름 (버튼명)
+    - route_path: 라우트패스
     - employee: 직원 정보 (dynamic 타입일 때)
     - metadata: 추가 메타데이터
     - route_type: 라우팅 타입 (internal, external)
     """
     response_data = {
         'response': response,  # 사용자에게 보여줄 응답 메시지
-        'type': response_type,
+        'response_type': response_type,
         'timestamp': datetime.now().isoformat()
     }
     
     # 라우팅 정보가 있는 경우 추가
-    if route_code or target_url:
+    if route_code or route_type:
         response_data.update({
             'route_code': route_code,
             'route_type': route_type,
-            'route_name': button_text,
-            'route_path': target_url
+            'route_name': route_name,
+            'route_path': route_path
         })
     
-    # 직원 정보가 있는 경우 추가
-    if employee:
-        response_data['employee'] = employee
-        
     # 메타데이터가 있는 경우 추가
     if metadata:
         response_data['metadata'] = metadata
@@ -94,164 +91,79 @@ def get_gpt_response(question: str, chat_history: Optional[List[Dict[str, str]]]
         - chat_history: 이전 대화 기록 (선택)
     - 동작: 
         - 정책/규정 등 policy_collection에서 유사 질문을 찾고
-        - 없으면 RAG+GPT로 답변 생성
-        - user_prompt 내용 기반으로 function_message 생성
+        - 검색된 내용만을 기반으로 답변 생성
     - 출력: dict (response, type, route_code 등)
     """
     start_time = time.time()
     logger.info(f"[USER] 질문 입력: {question}")
     logger.info(f"[시작] 질문 처리 시작")
     try:
-        # 1. 유사 질문 찾기 (ChromaDB 기반)
-        logger.info(f"[1단계] 유사 질문 검색 시작 (ChromaDB) [USER] {question}")
-        search_start = time.time()
-        docs = search_similar_in_collection("policy_collection", question, top_k=1)
-        similar_question = None
-        if docs:
-            doc = docs[0]
-            meta = doc.metadata
-            similar_question = {
-                'pattern_id': meta.get('pattern_id'),
-                'pattern_text': doc.page_content,
-                'response': meta.get('response'),
-                'pattern_type': meta.get('pattern_type'),
-                'response_type': meta.get('response_type'),
-                'route_code': meta.get('route_code'),
-                'domain': meta.get('domain'),
-                'category': meta.get('category'),
-                'similarity_score': meta.get('similarity_score', 0.0)
-            }
-        search_time = time.time() - search_start
-        if similar_question:
-            logger.info(f"[1단계 완료] 유사 질문 찾음 (소요시간: {search_time:.2f}초) [USER] {question}")
-            logger.info(f"[USER] 찾은 유사 질문: {similar_question.get('pattern_text')}")
-            logger.info(f"유사도 점수: {similar_question.get('similarity_score', 'N/A')}")
-            
-            # response_handler가 있는 경우 동적 핸들러 실행
-            response_handler = meta.get('response_handler')
-            if response_handler:
-                try:
-                    logger.info(f"[핸들러] 동적 핸들러 실행: {response_handler}")
-                    handler_module = importlib.import_module(f"core.handlers.{response_handler}")
-                    handler_func = getattr(handler_module, 'handle')
-                    handler_response = handler_func(question, meta, similar_question.get('response'))
-                    logger.info(f"[핸들러] 핸들러 응답: {handler_response}")
-                    return handler_response
-                except Exception as e:
-                    logger.error(f"[핸들러] 핸들러 실행 실패: {str(e)}")
-                    return create_response(
-                        response="죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다.",
-                        response_type="text"
-                    )
-            
-            # 기본 응답 반환
-            logger.info(f"[USER] 기본 응답 반환")
-            return create_response(
-                response=similar_question.get('response'),
-                response_type=similar_question.get('response_type', 'text'),
-                route_code=similar_question.get('route_code'),
-                target_url=meta.get('route_path'),
-                button_text=meta.get('route_name'),
-                route_type=meta.get('route_type'),
-                metadata={
-                    'domain': similar_question.get('domain'),
-                    'category': similar_question.get('category'),
-                    'pattern_id': similar_question.get('pattern_id'),
-                    'pattern_text': similar_question.get('pattern_text'),
-                    'pattern_type': similar_question.get('pattern_type')
-                }
-            )
-        else:
-            logger.warning(f"[1단계 완료] 유사 질문을 찾지 못함 또는 임계값 미달 (소요시간: {search_time:.2f}초) [USER] {question}")
-        # 1-2. Chroma DB에서 유사 문단(정책 등) 검색 (RAG_CHROMA_COLLECTIONS 기반)
+        # 1-1. Chroma DB에서 유사 문단(정책 등) 검색
         from services.chroma_service import get_similar_context_from_chroma
         chroma_context = get_similar_context_from_chroma(question)
+        
+        if not chroma_context:
+            logger.warning("[GPT] 검색된 정책 내용이 없습니다.")
+            return create_response(
+                response="죄송합니다. 해당 내용에 대한 정책 정보를 찾을 수 없습니다.",
+                response_type="none"
+            )
+            
         # 2. GPT 응답 생성 (LangChain ChatOpenAI)
         logger.info(f"[2단계] GPT 응답 생성 시작 (LangChain) [USER] {question}")
         gpt_start = time.time()
-        system_prompt = f"""
-        당신은 영우랩스의 도우미 어시스턴트입니다. 답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서 작성하세요.
-        - 기존에 존재하는 정책 문서를 참고하여 내용변경은 하지 말고, 친절한 답변형태로 작성하세요.
-        - GPT에서 생성한 추가답변은 별도 항목으로 분리하여 작성해주세요.
-        - 여러 항목은 반드시 아래 예시처럼 줄바꿈과 함께 마크다운 리스트(- 또는 1. 2. 등)로 작성하세요.
-        - 표가 필요하면 반드시 아래 예시처럼 각 행마다 줄바꿈을 넣어 마크다운 표로 작성하세요.
-        - 표 셀에는 줄바꿈 없이 간결하게 작성하세요.
-        - 리스트와 표를 혼합하지 말고, 표는 표만, 리스트는 리스트만 사용하세요.
-        - 코드 예시가 필요하면 마크다운 코드블록(```)을 사용하세요.
-        예시(반드시 줄바꿈 포함):
-        - 복지 제도
-        - 복지포인트
-        - 사내 기부금 관리
-        - 사내 사회공헌 활동
-        | 항목 | 내용 |
-        |------|------|
-        | 복지포인트 | 연 1회 지급, 복지몰 사용 가능 |
-        | 사내 기부금 관리 | 연 1회 공지, 지정 계좌 접수 |
-        | 사내 사회공헌 활동 | 연 2회 이상 실시 |
-{chroma_context}
-"""
-        user_prompt = f"질문: {question}\n답변은 반드시 마크다운(Markdown) 문법을 엄격히 지켜서, 줄바꿈을 반드시 사용해 표와 리스트를 구분해서 작성해 주세요. 예시처럼 각 행마다 줄바꿈을 넣어주세요."
-        llm = ChatOpenAI(
-            model_name="gpt-3.5-turbo",
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            temperature=0.5,  # 더 일관된 답변을 위해 낮춤
-            max_tokens=800,  # 더 자세한 설명을 위해 증가
-            request_timeout=20.0,  # 현재 값 유지
+        
+        # 2-1. 시스템 프롬프트 설정
+        system_prompt = """당신은 회사 정책을 안내하는 AI 어시스턴트입니다.
+다음 규칙을 반드시 지켜주세요:
+1. 제공된 정책 내용만을 기반으로 최대한 친절하게 답변하세요.
+2. 정책에 없는 내용은 추가하지 마세요.
+3. 정책 내용을 그대로 복사하지 말고, 사용자가 이해하기 쉽게 정리해서 설명하세요.
+4. 표 형식은 markdown 형식으로 깔끔하게 정리해주세요.
+5. 정책 내용이 불충분한 경우, '해당 내용에 대한 추가 정책 정보가 필요합니다.'라고 답변하세요."""
+
+        # 2-2. 메시지 구성
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"질문: {question}\n\n참고할 정책 내용:\n{chroma_context}"}
+        ]
+        
+        # 2-3. GPT 호출
+        response = openai_client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            messages=messages,
+            temperature=0.3,  # 더 일관된 답변을 위해 temperature 낮춤
+            max_tokens=1000
         )
         
-        # 메시지 리스트 구성
-        messages = [SystemMessage(content=system_prompt)]
+        # 2-4. 응답 처리
+        gpt_response = response.choices[0].message.content
+        logger.info(f"[2단계 완료] GPT 응답 생성 완료 (소요시간: {time.time() - gpt_start:.2f}초)")
         
-        # function_mapping.json의 매핑을 사용하여 function_message 생성
-        function_messages = []
-        for intent, mapping in config.function_mappings.items():
-            if any(keyword in question.lower() for keyword in mapping['keywords']):
-                # 핸들러 모듈 동적 임포트
-                handler_module = importlib.import_module(mapping['handler'])
-                handler_func = getattr(handler_module, mapping['function_name'])
-                
-                # 핸들러 호출 결과를 FunctionMessage로 전달
-                function_messages.append(create_function_message(
-                    function_name=mapping['function_name'],
-                    content=handler_func(question, None, None)[0]
-                ))
-                logger.info(f"[Function Message] {mapping['function_name']} 함수 메시지 추가")
-        
-        # function_message가 있는 경우에만 추가
-        if function_messages:
-            messages.extend(function_messages)
-            logger.info(f"[Function Message] 총 {len(function_messages)}개의 함수 메시지 추가")
-        
-        # 현재 질문 추가
-        messages.append(HumanMessage(content=user_prompt))
-        
-        response = llm(messages)
-        gpt_time = time.time() - gpt_start
-        logger.info(f"[2단계 완료] GPT 응답 생성 완료 (소요시간: {gpt_time:.2f}초)")
         # 3. 응답 저장
         logger.info("[3단계] 응답 저장 시작")
         save_start = time.time()
-        result = {
-            'response': response.content,
-            'type': 'gpt',
-            'route_code': None,
-            'target_url': None,
-            'button_text': None
+        
+        response_data = {
+            "response": gpt_response,
+            "response_type": "gpt",
+            "route_code": None,
+            "target_url": None,
+            "button_text": None
         }
-        save_time = time.time() - save_start
-        logger.info(f"[3단계 완료] 응답 저장 완료 (소요시간: {save_time:.2f}초)")
-        return result
+        
+        logger.info(f"[GPT 응답] 응답 데이터: {json.dumps(response_data, ensure_ascii=False, indent=2)}")
+        logger.info(f"[3단계 완료] 응답 저장 완료 (소요시간: {time.time() - save_start:.2f}초)")
+        
+        return response_data
+        
     except Exception as e:
-        error_time = time.time() - start_time
-        logger.error(f"[에러] 처리 중 오류 발생 (소요시간: {error_time:.2f}초)")
+        logger.error(f"[에러] 처리 중 오류 발생 (소요시간: {time.time() - start_time:.2f}초)")
         logger.error(f"에러 내용: {str(e)}")
-        return {
-            'response': '죄송합니다. 처리 중 오류가 발생했습니다.',
-            'type': 'error',
-            'route_code': None,
-            'target_url': None,
-            'button_text': None
-        }
+        return create_response(
+            response="죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다.",
+            response_type="none"
+        )
 
 def save_chat_interaction(user_message, ai_response, intent_tag, route_code, response_source, response_time, response_json=None):
     """대화 기록을 chat_history에 저장 (전체 응답 JSON 포함)"""
@@ -390,7 +302,14 @@ def get_db_response(user_message: str) -> Dict[str, Any]:
             if response_handler:
                 try:
                     logger.info(f"[핸들러] 동적 핸들러 실행: {response_handler}")
-                    handler_module = importlib.import_module(f"core.handlers.{response_handler}")
+                    try:
+                        handler_module = importlib.import_module(f"core.handlers.{response_handler}")
+                    except ModuleNotFoundError:
+                        logger.warning(f"[핸들러] 핸들러 모듈을 찾을 수 없음: {response_handler}")
+                        return create_response(
+                            response="죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다.",
+                            response_type="none"
+                        )
                     handler_func = getattr(handler_module, 'handle')
                     handler_response = handler_func(user_message, meta, similar_qa.get('response'))
                     logger.info(f"[핸들러] 핸들러 응답: {handler_response}")
@@ -399,7 +318,7 @@ def get_db_response(user_message: str) -> Dict[str, Any]:
                     logger.error(f"[핸들러] 핸들러 실행 실패: {str(e)}")
                     return create_response(
                         response="죄송합니다. 요청을 처리하는 중에 오류가 발생했습니다.",
-                        response_type="text"
+                        response_type="none"
                     )
             
             # 기본 응답 반환
@@ -408,8 +327,8 @@ def get_db_response(user_message: str) -> Dict[str, Any]:
                 response=similar_qa.get('response'),
                 response_type=similar_qa.get('response_type', 'text'),
                 route_code=similar_qa.get('route_code'),
-                target_url=meta.get('route_path'),
-                button_text=meta.get('route_name'),
+                route_path=meta.get('route_path'),
+                route_name=meta.get('route_name'),
                 route_type=meta.get('route_type'),
                 metadata={
                     'pattern_id': similar_qa.get('pattern_id'),
@@ -423,7 +342,7 @@ def get_db_response(user_message: str) -> Dict[str, Any]:
             logger.warning(f"[1단계 완료] 유사 QnA를 찾지 못함 (소요시간: {search_time:.2f}초) [USER] {user_message}")
             return create_response(
                 response="죄송합니다. 관련된 답변을 찾을 수 없습니다.",
-                response_type="text"
+                response_type="none"
             )
     except Exception as e:
         error_time = time.time() - start_time
@@ -431,7 +350,7 @@ def get_db_response(user_message: str) -> Dict[str, Any]:
         logger.error(f"에러 내용: {str(e)}")
         return create_response(
             response="죄송합니다. 처리 중 오류가 발생했습니다.",
-            response_type="text"
+            response_type="none"
         )
 
 def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
@@ -458,7 +377,7 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
         # DB 응답 로깅
         logger.info(f"[DB 응답] 응답 데이터: {json.dumps(db_response, ensure_ascii=False, indent=2)}")
         
-        if db_response and db_response.get('response_type') != 'text':
+        if db_response and db_response.get('response_type') != 'none':
             logger.info(f"[1단계 완료] DB 기반 응답 성공 (소요시간: {db_time:.2f}초)")
             return db_response
         else:
@@ -476,18 +395,14 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
         if gpt_response:
             logger.info(f"[2단계 완료] GPT 기반 응답 생성 완료 (소요시간: {gpt_time:.2f}초)")
             return create_response(
-                response=gpt_response.get('response', '응답을 생성할 수 없습니다.'),
+                response=gpt_response.get('response', '검색된 결과가 존재 하지 않습니다.'),
                 response_type="gpt",
-                route_code=gpt_response.get('route_code'),
-                target_url=gpt_response.get('target_url'),
-                button_text=gpt_response.get('button_text'),
-                route_type=gpt_response.get('route_type')
             )
         else:
             logger.warning(f"[2단계 완료] GPT 기반 응답 생성 실패 (소요시간: {gpt_time:.2f}초)")
             return create_response(
                 response="죄송합니다. 응답을 생성할 수 없습니다.",
-                response_type="text"
+                response_type="none"
             )
             
     except Exception as e:
@@ -495,7 +410,7 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
         logger.error(f"[에러] 처리 중 오류 발생 (소요시간: {error_time:.2f}초)")
         return create_response(
             response="죄송합니다. 처리 중 오류가 발생했습니다.",
-            response_type="text"
+            response_type="none"
         )
 
 def initialize_db_collections():

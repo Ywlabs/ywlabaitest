@@ -4,14 +4,14 @@
       <div v-for="(msg, idx) in messages" :key="idx" :class="[msg.type === 'user' ? 'user-message' : 'ai-message']">
         <div class="message-content">
           <!-- AI 메시지이면서 직원 정보가 구조화되어 있으면 표로 출력 -->
-          <template v-if="msg.type === 'db' && msg.response_json && msg.response_json.data && msg.response_json.data.employee">
+          <template v-if="msg.response_json?.data?.resdata?.employee">
             <table class="employee-table">
               <tbody>
-                <tr><th>이름</th><td>{{ msg.response_json.data.employee.name }}</td></tr>
-                <tr><th>직책</th><td>{{ msg.response_json.data.employee.position }}</td></tr>
-                <tr><th>부서</th><td>{{ msg.response_json.data.employee.dept_nm }}</td></tr>
-                <tr><th>이메일</th><td>{{ msg.response_json.data.employee.email }}</td></tr>
-                <tr><th>연락처</th><td>{{ msg.response_json.data.employee.phone }}</td></tr>
+                <tr><th>이름</th><td>{{ msg.response_json.data.resdata.employee.name }}</td></tr>
+                <tr><th>직책</th><td>{{ msg.response_json.data.resdata.employee.position }}</td></tr>
+                <tr><th>부서</th><td>{{ msg.response_json.data.resdata.employee.dept_nm }}</td></tr>
+                <tr><th>이메일</th><td>{{ msg.response_json.data.resdata.employee.email }}</td></tr>
+                <tr><th>연락처</th><td>{{ msg.response_json.data.resdata.employee.phone }}</td></tr>
               </tbody>
             </table>
           </template>
@@ -23,12 +23,12 @@
           <button v-if="msg.route_code && msg.route_type === 'widget'"
                   @click="showWidget(msg.route_code, msg)"
                   class="action-button">
-            {{ msg.button_text || '위젯 열기' }}
+            {{ msg.route_name || '위젯 열기' }}
           </button>
-          <button v-else-if="msg.target_url && msg.route_type === 'link'"
-                  @click="navigateTo(msg.target_url)"
+          <button v-else-if="msg.route_path && msg.route_type === 'link'"
+                  @click="navigateTo(msg.route_path)"
                   class="action-button">
-            {{ msg.button_text || '자세히 보기' }}
+            {{ msg.route_name || '자세히 보기' }}
           </button>
         </div>
       </div>

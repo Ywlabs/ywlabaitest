@@ -18,8 +18,8 @@ def handle(user_message: str, meta: dict, response: str) -> dict:
     if not name:
         logger.warning("[핸들러] 직원 이름 추출 실패")
         return {
-            'response': '직원 이름을 입력해주세요.',
-            'type': 'text',
+            'response': '죄송합니다. 직원 이름을 찾을 수 없습니다.',
+            'response_type': 'none',
             'timestamp': datetime.now().isoformat()
         }
     
@@ -42,7 +42,7 @@ def handle(user_message: str, meta: dict, response: str) -> dict:
         logger.warning(f"[핸들러] 직원 정보 없음: {name}")
         return {
             'response': f'죄송합니다. {name}님의 정보를 찾을 수 없습니다.',
-            'type': 'text',
+            'response_type': 'none',
             'timestamp': datetime.now().isoformat()
         }
     
@@ -52,20 +52,26 @@ def handle(user_message: str, meta: dict, response: str) -> dict:
     
     return {
         'response': employee_response,
-        'type': 'dynamic',
+        'response_type': meta.get('response_type'),
         'timestamp': datetime.now().isoformat(),
-        'employee': {
-            'name': employee['name'],
-            'position': employee['position'],
-            'dept_nm': employee['dept_nm'],
-            'email': employee['email'],
-            'phone': employee['phone']
-        },
+        'route_code': meta.get('route_code',''),
+        'route_type': meta.get('route_type',''),
+        'route_path': meta.get('route_path',''),
+        'route_name': meta.get('route_name',''),
         'metadata': {
-            'domain': meta.get('domain'),
-            'category': meta.get('category'),
-            'pattern_id': meta.get('pattern_id'),
-            'pattern_text': meta.get('pattern_text'),
-            'pattern_type': meta.get('pattern_type')
+            'domain': meta.get('domain',''),
+            'category': meta.get('category',''),
+            'pattern_id': meta.get('pattern_id',''),
+            'pattern_text': meta.get('pattern_text',''),
+            'pattern_type': meta.get('pattern_type','')
+        },
+        'resdata': {
+            'employee': {
+                'name': employee['name'],
+                'position': employee['position'],
+                'dept_nm': employee['dept_nm'],
+                'email': employee['email'],
+                'phone': employee['phone']
+            }
         }
     } 

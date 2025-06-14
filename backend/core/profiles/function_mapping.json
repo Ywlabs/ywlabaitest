@@ -1,23 +1,9 @@
 {
-    "연차": {
+    "테스트트": {
         "function_name": "get_annual_leave_info",
-        "keywords": ["연차", "휴가", "annual leave"],
-        "category": "휴가",
-        "description": "연차 정책 정보 조회",
-        "handler": "core.handlers.leave_handler"
-    },
-    "반차": {
-        "function_name": "get_half_leave_info",
-        "keywords": ["반차", "half day", "오전반차", "오후반차"],
-        "category": "휴가",
-        "description": "반차 정책 정보 조회",
-        "handler": "core.handlers.leave_handler"
-    },
-    "매출": {
-        "function_name": "get_sales_info",
-        "keywords": ["매출", "실적", "sales", "revenue"],
-        "category": "경영",
-        "description": "매출 정보 조회",
-        "handler": "core.handlers.sales_handler"
+        "keywords": ["테스트트", "테스트트", "annual leave"],
+        "category": "테스트트",
+        "description": "테스트트",
+        "handler": ""
     }
 } 

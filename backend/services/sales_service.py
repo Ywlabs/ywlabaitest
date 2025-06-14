@@ -2,6 +2,60 @@ from database import get_db_connection
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
+def get_sales_info_and_fill_template(year: str, response_template: str) -> str:
+    """
+    매출 정보를 템플릿에 채워서 반환
+    - 입력: 
+        - year: 연도
+        - response_template: 응답 템플릿
+    - 출력: 채워진 응답 문자열
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 현재 연도의 매출 정보 조회
+            cursor.execute('''
+                SELECT 
+                    year,
+                    SUM(sales) as total_sales,
+                    SUM(sales)/12 as monthly_sales
+                FROM sales_history 
+                WHERE year = %s
+                GROUP BY year
+            ''', (year,))
+            current_sales = cursor.fetchone()
+            
+            if not current_sales:
+                return None
+                
+            # 전년도 매출 정보 조회
+            prev_year = int(year) - 1
+            cursor.execute('''
+                SELECT SUM(sales) as prev_total_sales
+                FROM sales_history 
+                WHERE year = %s
+                GROUP BY year
+            ''', (prev_year,))
+            prev_sales = cursor.fetchone()
+            
+            # 성장률 계산
+            if prev_sales and prev_sales['prev_total_sales'] > 0:
+                growth_rate = (current_sales['total_sales'] - prev_sales['prev_total_sales']) / prev_sales['prev_total_sales'] * 100
+            else:
+                growth_rate = 0
+            
+            # 응답 템플릿 채우기
+            response_text = response_template
+            response_text = response_text.replace('{year}', str(current_sales['year']))
+            response_text = response_text.replace('{sales.year}', str(current_sales['year']))
+            response_text = response_text.replace('{sales.total_sales}', format(current_sales['total_sales'], ','))
+            response_text = response_text.replace('{sales.monthly_sales}', format(current_sales['monthly_sales'], ','))
+            response_text = response_text.replace('{sales.growth_rate}', f"{growth_rate:.1f}%")
+            return response_text
+            
+    finally:
+        conn.close()
+
 # 연도별 매출 집계 함수
 def get_sales_summary(year):
     conn = get_db_connection()

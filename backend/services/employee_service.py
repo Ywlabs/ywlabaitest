@@ -13,7 +13,7 @@ def extract_employee_name(user_message):
     # 정적 패턴: 영우랩스 조정현, 조정현 대표 등
     # 패턴에서 이름 부분만 추출
     name = user_message
-    for pat in ['영우랩스 ', '대표', '이사', '님', '정보']:
+    for pat in ['영우랩스 ', '대표', '이사', '님', '정보', '과장','차장','사원','부장','대표이사','대표님','대표님']:
         name = name.replace(pat, '')
     name = name.strip()
     if name:

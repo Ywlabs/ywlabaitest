@@ -90,14 +90,15 @@ def initialize_rag_collections():
                 collection = client.create_collection(
                     name=item["collection"],
                     metadata={
-                        "hnsw:space": "cosine",
-                        "hnsw:construction_ef": 100,
-                        "hnsw:search_ef": 100,
-                        "hnsw:M": 16,
+                        "hnsw:space": item.get("hnsw:space", "cosine"),
+                        "hnsw:construction_ef": item.get("hnsw:construction_ef", 200),
+                        "hnsw:search_ef": item.get("hnsw:search_ef", 200),
+                        "hnsw:M": item.get("hnsw:M", 32),
                         "embedding_model": item["embedding_model"],
                         "type": item["type"],
                         "parser": item["parser"],
-                        "search_top_k": item["search_top_k"]
+                        "search_top_k": item["search_top_k"],
+                        "similarity_threshold": item.get("similarity_threshold", 0.6)
                     }
                 )
             else:
@@ -141,14 +142,15 @@ def initialize_db_collections():
                 
                 # 2. 새 컬렉션 생성
                 metadata = {
-                    "hnsw:space": "cosine",
-                    "hnsw:construction_ef": 100,
-                    "hnsw:search_ef": 100,
-                    "hnsw:M": 16,
+                    "hnsw:space": item.get("hnsw:space", "cosine"),
+                    "hnsw:construction_ef": item.get("hnsw:construction_ef", 100),
+                    "hnsw:search_ef": item.get("hnsw:search_ef", 100),
+                    "hnsw:M": item.get("hnsw:M", 16),
                     "embedding_model": item["embedding_model"],
                     "type": item["type"],
                     "parser": item["parser"],
-                    "search_top_k": item["search_top_k"]
+                    "search_top_k": item["search_top_k"],
+                    "similarity_threshold": item.get("similarity_threshold", 0.8)  # DB 컬렉션은 더 높은 임계값 사용
                 }
                 
                 collection = client.create_collection(
@@ -345,7 +347,11 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
         # 9. 검색 결과를 Document로 변환 및 필터링
         documents = []
         if results and results.get('documents'):
-            # 컬렉션의 임계값 가져오기
+            # 컬렉션의 임계값 가져오기 (기본값 0.7로 설정)
+            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
+            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
+            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
+            
             collection_threshold = float(collection.metadata.get('similarity_threshold', 0.7))
             logger.info(f"[검색] 컬렉션 임계값: {collection_threshold}")
             
@@ -362,7 +368,7 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
                 
                 # 9-3. 임계값 체크 (컬렉션의 임계값 사용)
                 if similarity_score < collection_threshold:
-                    logger.debug(f"[검색] 임계값 미달: {similarity_score:.4f} < {collection_threshold}")
+                    logger.debug(f"[검색] 임계값 미달: {similarity_score:.4f} < {collection_threshold} (문서: {doc[:100]}...)")
                     continue
                 
                 # 9-4. Document 생성
@@ -370,14 +376,16 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
                     page_content=doc,
                     metadata={
                         **metadata,
-                        'similarity_score': similarity_score,  # 원래 유사도 점수 사용
-                        'weighted_score': weighted_score,  # 가중치 점수는 참고용으로만 저장
+                        'similarity_score': similarity_score,
+                        'weighted_score': weighted_score,
                         'distance': distance,
-                        'similarity_threshold': collection_threshold  # 컬렉션의 임계값 저장
+                        'similarity_threshold': collection_threshold
                     }
                 )
                 documents.append(document)
+                logger.info(f"[검색] 문서 추가됨: 유사도={similarity_score:.4f}, 내용={doc[:100]}...")
                 
+        logger.info(f"[검색] 최종 필터링된 문서 수: {len(documents)}")
         return documents
         
     except Exception as e:
@@ -407,21 +415,33 @@ def get_similar_context_from_chroma(query: str) -> str:
     - 출력: 검색된 문맥 문자열
     """
     try:
+        logger.info(f"[문맥검색] 시작 - 쿼리: {query}")
         # 각 컬렉션에서 검색
         all_docs = []
         for collection in config.RAG_CHROMA_COLLECTIONS:
-            docs = search_similar_in_collection(collection['collection'], query)  # collection['collection'] 사용
+            docs = search_similar_in_collection(collection['collection'], query)
+            if docs:  # 검색 결과가 있는 컬렉션만 로깅
+                logger.info(f"[문맥검색] 컬렉션 {collection['collection']} 검색 결과: {len(docs)}개 문서")
+                # 검색된 문서 상세 로깅
+                for i, doc in enumerate(docs):
+                    logger.info(f"[문맥검색] 문서 {i+1}:")
+                    logger.info(f"[문맥검색] - 내용: {doc.page_content[:200]}...")
+                    logger.info(f"[문맥검색] - 유사도: {doc.metadata.get('similarity_score', 'N/A')}")
+                    logger.info(f"[문맥검색] - 메타데이터: {doc.metadata}")
             all_docs.extend(docs)
         
         # 검색 결과가 없으면 빈 문자열 반환
         if not all_docs:
+            logger.warning("[문맥검색] 검색 결과 없음")
             return ""
         
         # 검색 결과를 문맥 문자열로 변환
         context = "\n\n".join([doc.page_content for doc in all_docs])
+        logger.info(f"[문맥검색] 최종 문맥 생성 완료 (길이: {len(context)}자)")
+        logger.info(f"[문맥검색] 총 {len(all_docs)}개 문서 사용")
         return f"\n참고 문맥:\n{context}"
     except Exception as e:
-        logger.error(f"문맥 검색 중 오류 발생: {str(e)}")
+        logger.error(f"[문맥검색] 오류 발생: {str(e)}")
         return ""
 
 def create_collection(collection_name: str, embedding_model: str) -> None:
