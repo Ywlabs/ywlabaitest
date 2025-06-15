@@ -15,6 +15,7 @@ from database import init_db
 from services.chroma_service import initialize_collections
 from config import get_config
 import shutil
+from schedulers.environment_scheduler import start_scheduler
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -30,10 +31,12 @@ def create_app():
     # CORS 설정 - 2024-06-14 기준 전체 허용으로 설정. 절대 수정하지 말 것!
     CORS(app, resources={
         r"/*": {
-            "origins": "*",  # 2024-06-14 기준 전체 허용. 절대 수정하지 말 것!
+            "origins": ["*"],  # 2024-06-14 기준 전체 허용. 절대 수정하지 말 것!
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
+            "expose_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "max_age": 3600
         }
     })
     
@@ -59,13 +62,21 @@ def create_app():
         logger.warning("[ChromaDB] 초기화 실패로 인해 벡터 검색 기능이 제한될 수 있습니다.")
     
     # 블루프린트 등록
+    app.register_blueprint(legacy_bp)  # legacy_bp를 먼저 등록
     app.register_blueprint(chat_bp)
     app.register_blueprint(employee_bp)
     app.register_blueprint(sales_bp)
     app.register_blueprint(widget_bp)
-    app.register_blueprint(legacy_bp)
     app.register_blueprint(routes_bp)
-    
+
+    # 환경 정보 스케줄러 시작
+    environment_scheduler = start_scheduler()
+
+    # 등록된 라우트 로깅
+    logger.info("등록된 라우트:")
+    for rule in app.url_map.iter_rules():
+        logger.info(f"  {rule.endpoint}: {rule.rule}")
+
     return app
 
 if __name__ == '__main__':
@@ -81,10 +92,11 @@ if __name__ == '__main__':
     
     app = create_app()
     
-    # 블루프린트 등록 상태 로깅
-    logger.info("등록된 블루프린트:")
-    for rule in app.url_map.iter_rules():
-        logger.info(f"  {rule.endpoint}: {rule.rule}")
-    
     logger.info("Flask 서버 시작: http://0.0.0.0:5000")
-    app.run(host='0.0.0.0', port=5000, debug=True) 
+    app.run(host='0.0.0.0', port=5000, debug=True)
+
+# 앱 종료 시 스케줄러 종료
+@app.teardown_appcontext
+def shutdown_scheduler(exception=None):
+    if environment_scheduler:
+        environment_scheduler.shutdown() 

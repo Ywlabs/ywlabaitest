@@ -18,6 +18,7 @@ const routes = [
     children: [
       {
         path: '',
+        name: 'AboutDefault',
         redirect: '/about/greeting'
       },
       {
@@ -49,6 +50,7 @@ const routes = [
     children: [
       {
         path: '',
+        name: 'SolutionsDefault',
         redirect: '/solutions/aigenius'
       },
       {
@@ -80,6 +82,7 @@ const routes = [
     children: [
       {
         path: '',
+        name: 'ESGDefault',
         redirect: '/esg/compliance'
       },
       {

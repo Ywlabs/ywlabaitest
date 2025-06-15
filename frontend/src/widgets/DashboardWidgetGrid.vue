@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="dashboard-dim" @click="$emit('close')"></div>
-  <div class="dashboard-widget-grid">
-    <!-- 상단: 검색창/버튼/닫기 -->
-    <div class="dashboard-header">
+    <div class="dashboard-widget-grid fade-in">
+      <!-- 상단: 검색창/버튼/닫기 -->
+      <div class="dashboard-header">
         <div class="search-container">
           <div class="search-area">
             <input 
@@ -32,7 +32,7 @@
             >
               {{ search }}
             </span>
-    </div>
+          </div>
         </div>
       </div>
       <div class="dashboard-body">
@@ -51,14 +51,14 @@
             </div>
           </div>
         </div>
-      <div class="widget-grid">
-        <div v-for="n in 4" :key="n" class="widget-slot">
-          <component
-            v-if="selectedWidgets[n-1]"
-            :is="selectedWidgets[n-1].componentName"
-            v-bind="selectedWidgets[n-1].props"
-            @close="removeWidget(n-1)"
-          />
+        <div class="widget-grid">
+          <div v-for="n in 4" :key="n" class="widget-slot">
+            <component
+              v-if="selectedWidgets[n-1]"
+              :is="selectedWidgets[n-1].componentName"
+              v-bind="selectedWidgets[n-1].props"
+              @close="removeWidget(n-1)"
+            />
             <div v-else class="empty-slot">
               <lottie-player
                 src="/assets/json/loading_ani.json"
@@ -236,9 +236,14 @@ export default {
   right: 0;
   bottom: 0;
   z-index: 1000;
-  background: rgba(0,0,0,0.18);
-  backdrop-filter: blur(2px);
+  animation: fadeIn 0.3s ease-out;
 }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .dashboard-widget-grid {
   position: relative;
   z-index: 1001;
@@ -247,10 +252,10 @@ export default {
   height: 100%;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  min-width: 900px;
-  min-height: 600px;
+  width: 100%;
+  height: 100%;
 }
 
 .dashboard-header {
@@ -260,6 +265,7 @@ export default {
   padding: 24px 24px 16px;
   background: #fff;
   border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
 .dashboard-body {
@@ -268,10 +274,9 @@ export default {
   padding: 24px;
   gap: 24px;
   overflow: hidden;
-  min-height: 480px;
   position: relative;
   z-index: 1;
-  height: 100%;
+  height: calc(100% - 140px); /* 헤더와 푸터 높이를 제외한 높이 */
 }
 
 .dashboard-footer {
@@ -281,7 +286,7 @@ export default {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -297,13 +302,14 @@ export default {
   line-height: 30px;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  transition: background 0.2s;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
   margin-left: 16px;
 }
 
 .footer-close-btn:hover {
   background: #f5f5f5;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .widget-grid {
@@ -319,20 +325,22 @@ export default {
 }
 
 .widget-slot {
-  width: 565px;
-  height: 246px;
-  min-width: 565px;
-  max-width: 565px;
-  min-height: 246px;
-  max-height: 246px;
   position: relative;
   background: #f8f9fa;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
+  min-height: 200px;
+  width: 100%;
+  height: 100%;
+  transition: box-shadow 0.3s ease;
+}
+
+.widget-slot:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .widget-slot > * {
@@ -431,18 +439,21 @@ export default {
   color: #222;
   font-size: 1em;
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s ease-out;
 }
 
 .search-result-item:hover {
   background: #f0f4fa;
   border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .search-result-item.selected {
   border: 2px solid #2355d6;
   background: #e6f7ff;
-  box-shadow: 0 2px 8px rgba(35,85,214,0.15);
+  box-shadow: 0 2px 8px rgba(35, 85, 214, 0.15);
 }
 
 .search-result-item.readonly {
@@ -620,5 +631,71 @@ export default {
 .recent-tag:hover {
   background: #e9ecef;
   border-color: #dee2e6;
+}
+
+@media (max-width: 1200px) {
+  .widget-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, 1fr);
+  }
+  
+  .widget-slot {
+    min-height: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-body {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .widget-grid {
+    gap: 16px;
+  }
+  
+  .widget-slot {
+    min-height: 160px;
+  }
+}
+
+/* 애니메이션 효과 */
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation: scaleIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 </style> 

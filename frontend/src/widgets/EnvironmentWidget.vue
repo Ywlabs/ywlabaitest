@@ -35,11 +35,15 @@
           <span>{{ khai_grade || '-' }}</span>
         </div>
       </div>
+      <div class="update-time">
+        마지막 업데이트: {{ lastUpdateTime }}
+      </div>
     </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/common/axios'
 
 // 날씨 아이콘 매핑 (OpenWeatherMap 기준)
@@ -63,47 +67,46 @@ const weatherIconMap = {
 
 export default {
   name: 'EnvironmentWidget',
-  data() {
-    return {
-      loading: true,
-      error: null,
-      weather: {
-        temp: null,
-        main: '',
-        desc: ''
-      },
-      pm10: null,
-      pm25: null,
-      khai_grade: null,
-    }
-  },
-  computed: {
-    weatherIconUrl() {
-      return weatherIconMap[this.weather.main] || weatherIconMap['Clear']
-    },
-    weatherDesc() {
-      return this.weather.desc || this.weather.main
-    },
-    pm10Grade() {
-      if (this.pm10 === null) return '-'
-      if (this.pm10 <= 30) return '좋음'
-      if (this.pm10 <= 80) return '보통'
-      if (this.pm10 <= 150) return '나쁨'
+  setup() {
+    const loading = ref(true)
+    const error = ref(null)
+    const weather = ref({
+      temp: null,
+      main: '',
+      desc: ''
+    })
+    const pm10 = ref(null)
+    const pm25 = ref(null)
+    const khai_grade = ref(null)
+    const eventSource = ref(null)
+    const lastUpdateTime = ref(null)
+    let pollingInterval = null
+
+    const weatherIconUrl = computed(() => {
+      return weatherIconMap[weather.value.main] || weatherIconMap['Clear']
+    })
+
+    const weatherDesc = computed(() => {
+      return weather.value.desc || weather.value.main
+    })
+
+    const pm10Grade = computed(() => {
+      if (pm10.value === null) return '-'
+      if (pm10.value <= 30) return '좋음'
+      if (pm10.value <= 80) return '보통'
+      if (pm10.value <= 150) return '나쁨'
       return '매우나쁨'
-    },
-    pm25Grade() {
-      if (this.pm25 === null) return '-'
-      if (this.pm25 <= 15) return '좋음'
-      if (this.pm25 <= 35) return '보통'
-      if (this.pm25 <= 75) return '나쁨'
+    })
+
+    const pm25Grade = computed(() => {
+      if (pm25.value === null) return '-'
+      if (pm25.value <= 15) return '좋음'
+      if (pm25.value <= 35) return '보통'
+      if (pm25.value <= 75) return '나쁨'
       return '매우나쁨'
-    },
-    o3Grade() {
-      return '-';
-    }
-  },
-  methods: {
-    aqiClass(val) {
+    })
+
+    const aqiClass = (val) => {
       if (val === null) return 'aqi-good'
       if (typeof val === 'number') {
         if (val <= 30 || val <= 15 || val <= 0.030) return 'aqi-good'
@@ -112,45 +115,181 @@ export default {
         return 'aqi-verybad'
       }
       return 'aqi-good'
-    },
-    async fetchWeatherAndAir() {
-      this.loading = true; // 클릭 시 즉시 로딩 시작
-      try {
-        // 1. 백엔드에서 날씨 정보 받아오기
-        const weatherRes = await api.get('/api/legacy/weather')
-        if (weatherRes.data.status === 'success') {
-          this.weather.temp = Math.round(weatherRes.data.data.temp)
-          this.weather.main = weatherRes.data.data.main
-          this.weather.desc = weatherRes.data.data.desc
-        } else {
-          throw new Error(weatherRes.data.message || '날씨 정보 오류')
+    }
+
+    const setupSSE = () => {
+      // 기존 EventSource가 있다면 닫기
+      if (eventSource.value) {
+        eventSource.value.close()
+      }
+
+      // 새로운 EventSource 연결
+      eventSource.value = new EventSource('http://localhost:5000/api/environment/stream')
+
+      // SSE 이벤트 리스너 설정
+      eventSource.value.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'ping') {
+            return // ping 메시지는 무시
+          }
+          if (data.status === 'success') {
+            updateEnvironmentData(data.data)
+            error.value = null // 성공 시 에러 메시지 제거
+          } else if (data.status === 'error') {
+            error.value = data.message
+          }
+        } catch (e) {
+          console.error('SSE 데이터 파싱 오류:', e)
+          error.value = '데이터 처리 중 오류가 발생했습니다.'
         }
-        // 2. 백엔드에서 대기질 정보 받아오기
-        const airRes = await api.get('/api/legacy/air-quality')
-        if (airRes.data.status === 'success') {
-          // API는 문자열로 반환하므로 숫자로 변환
-          this.pm10 = airRes.data.data.pm10 ? Number(airRes.data.data.pm10) : null
-          this.pm25 = airRes.data.data.pm25 ? Number(airRes.data.data.pm25) : null
-          this.khai_grade = airRes.data.data.khai_grade || null;
-        } else {
-          throw new Error(airRes.data.message || '대기질 정보 오류')
-        }
-      } catch (e) {
-        this.error = '날씨/대기질 정보를 불러오지 못했습니다.'
-      } finally {
-        this.loading = false
+      }
+
+      eventSource.value.onerror = (error) => {
+        console.error('SSE 연결 오류:', error)
+        error.value = '실시간 업데이트 연결이 끊어졌습니다.'
+        // SSE 연결 실패 시 폴링으로 폴백
+        eventSource.value.close()
+        startPolling()
       }
     }
-  },
-  mounted() {
-    this.fetchWeatherAndAir();
-    this._interval = setInterval(() => {
-      this.fetchWeatherAndAir();
-    }, 12 * 60 * 1000); // 12분마다 갱신
-  },
-  beforeUnmount() {
-    if (this._interval) clearInterval(this._interval);
-  },
+
+    const startPolling = () => {
+      // 1분마다 폴링
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
+      pollingInterval = setInterval(() => {
+        fetchWeatherAndAir()
+      }, 60 * 1000)
+    }
+
+    const fetchWeatherAndAir = async () => {
+      loading.value = true
+      try {
+        const response = await api.get('/api/environment/current')
+        if (response.data.status === 'success') {
+          updateEnvironmentData(response.data.data)
+          error.value = null // 성공 시 에러 메시지 제거
+        } else {
+          throw new Error(response.data.message || '환경 정보 조회 실패')
+        }
+      } catch (e) {
+        error.value = '환경 정보를 불러오지 못했습니다.'
+        console.error('환경 정보 조회 오류:', e)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const updateEnvironmentData = (data) => {
+      try {
+        if (!data) {
+          console.error('환경 정보 데이터가 없습니다.')
+          error.value = '환경 정보를 가져올 수 없습니다.'
+          return
+        }
+
+        // 날씨 정보 업데이트
+        try {
+          const weatherData = data.weather || {}
+          weather.value.temp = weatherData.temp ? Math.round(Number(weatherData.temp)) : 0
+          weather.value.main = weatherData.main || ''
+          weather.value.desc = weatherData.description || ''
+        } catch (e) {
+          console.error('날씨 정보 업데이트 실패:', e)
+          weather.value.temp = 0
+          weather.value.main = ''
+          weather.value.desc = ''
+        }
+        
+        // 대기질 정보 업데이트
+        try {
+          const airQualityData = data.air_quality || {}
+          pm10.value = airQualityData.pm10 ? Number(airQualityData.pm10) : 0
+          pm25.value = airQualityData.pm25 ? Number(airQualityData.pm25) : 0
+          khai_grade.value = airQualityData.khai_grade || ''
+        } catch (e) {
+          console.error('대기질 정보 업데이트 실패:', e)
+          pm10.value = 0
+          pm25.value = 0
+          khai_grade.value = ''
+        }
+        
+        // 타임스탬프 업데이트
+        try {
+          if (data.timestamp) {
+            const date = new Date(data.timestamp)
+            if (!isNaN(date.getTime())) {
+              lastUpdateTime.value = date.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              })
+            } else {
+              lastUpdateTime.value = '날짜 정보 없음'
+            }
+          } else {
+            lastUpdateTime.value = '날짜 정보 없음'
+          }
+        } catch (e) {
+          console.error('타임스탬프 업데이트 실패:', e)
+          lastUpdateTime.value = '날짜 정보 없음'
+        }
+        
+        console.info('환경 정보 업데이트 완료:', {
+          temp: weather.value.temp,
+          main: weather.value.main,
+          desc: weather.value.desc,
+          pm10: pm10.value,
+          pm25: pm25.value,
+          khai_grade: khai_grade.value,
+          timestamp: lastUpdateTime.value
+        })
+      } catch (error) {
+        console.error('환경 정보 업데이트 중 오류:', error)
+        error.value = '데이터 처리 중 오류가 발생했습니다.'
+      }
+    }
+
+    onMounted(() => {
+      // 초기 데이터 로드
+      fetchWeatherAndAir()
+      
+      // SSE 연결 시도
+      setupSSE()
+    })
+
+    onUnmounted(() => {
+      // 컴포넌트 언마운트 시 정리
+      if (eventSource.value) {
+        eventSource.value.close()
+      }
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
+    })
+
+    return {
+      loading,
+      error,
+      weather,
+      pm10,
+      pm25,
+      khai_grade,
+      lastUpdateTime,
+      weatherIconUrl,
+      weatherDesc,
+      pm10Grade,
+      pm25Grade,
+      aqiClass,
+      fetchWeatherAndAir
+    }
+  }
 }
 </script>
 
@@ -296,5 +435,13 @@ export default {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* 마지막 업데이트 시간 표시 스타일 추가 */
+.update-time {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 8px;
+  text-align: right;
 }
 </style> 

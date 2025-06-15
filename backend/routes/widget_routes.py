@@ -5,6 +5,7 @@ widget_bp = Blueprint('widgets', __name__, url_prefix='/api/widgets')
 
 @widget_bp.route('/search', methods=['POST'])
 def widget_search():
+    """날씨정보 위젯 검색"""
     data = request.get_json()
     query = data.get('query', '')
     results = search_widgets(query)

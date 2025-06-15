@@ -1192,3 +1192,19 @@ UNLOCK TABLES;
 /*M!100616 SET NOTE_VERBOSITY=@OLD_NOTE_VERBOSITY */;
 
 -- Dump completed on 2025-06-14 23:28:06
+
+
+-- 환경 정보 테이블
+CREATE TABLE IF NOT EXISTS environment_data (
+    id SERIAL PRIMARY KEY,
+    temp FLOAT NOT NULL,
+    main VARCHAR(50) NOT NULL,
+    desc VARCHAR(100) NOT NULL,
+    pm10 VARCHAR(10),
+    pm25 VARCHAR(10),
+    khai_grade VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 환경 정보 인덱스
+CREATE INDEX IF NOT EXISTS idx_environment_created_at ON environment_data(created_at);

@@ -45,7 +45,7 @@ class BaseConfig:
                 "get_all_func": "services.widget_service.get_all_widgets",
                 "to_doc_func": "core.converters.widget_converter.widget_to_document",
                 "search_top_k": 10,
-                "similarity_threshold": 0.8,  # 위젯은 더 유연한 매칭 허용
+                "similarity_threshold": 0.75,  # 위젯은 더 유연한 매칭 허용
                 "hnsw:space": "cosine",
                 "hnsw:construction_ef": 100,
                 "hnsw:search_ef": 100,

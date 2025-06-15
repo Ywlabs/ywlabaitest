@@ -90,7 +90,7 @@ const ENERGY_WIDGET = defineAsyncComponent(() => import('@/widgets/DashboardWidg
 const widgetMap = {
   ORG_CHART: () => import('@/widgets/OrganizationWidget.vue'),
   SALES_WIDGET: () => import('@/widgets/SalesWidget.vue'),
-  DASHBOARD_WIDGET: () => ENERGY_WIDGET,
+  DASHBOARD_WIDGET: () => import('@/widgets/DashboardWidgetGrid.vue'),
   // 앞으로 추가될 위젯은 Widget 네이밍 사용
 }
 
@@ -136,6 +136,11 @@ export default {
       this.showCursor = !this.showCursor;
     }, 500);
     this.loadLastWidget();
+    // 페이지 진입 시 스크롤 위치 최상단으로 이동
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   },
   beforeDestroy() {
     clearInterval(this.typingInterval);
@@ -171,38 +176,55 @@ export default {
     async handleOpenWidget({ route_code, widgetProps }) {
       const code = route_code ? route_code.toUpperCase() : '';
       console.log('route_code:', route_code, 'code:', code); // 디버깅용
-      if (code === 'DASHBOARD_WIDGET') {
-        const comp = (await widgetMap[code]()).default;
-        this.dashboardWidgetComponent = markRaw(comp);
-        this.$nextTick(() => {
-          const layout = this.$refs.layoutContainer;
-          if (layout) {
-            const rect = layout.getBoundingClientRect();
-            const minHeight = 600;
-            const maxHeight = Math.max(window.innerHeight * 0.9, minHeight);
-            // 중앙 정렬로 시작
-            this.overlayPos = null;
-            this.dashboardOverlayStyle = {
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: rect.width + 'px',
-              minHeight: minHeight + 'px',
-              maxHeight: maxHeight + 'px',
-              zIndex: 1000,
-              overflow: 'hidden',
-              transition: 'opacity 0.3s'
-            };
-            this.showDashboardOverlay = true;
-          }
-        });
-      } else if (widgetMap[code]) {
-        const comp = (await widgetMap[code]()).default
-        this.activeWidgetComponent = markRaw(comp)
-        this.activeWidgetKey += 1
-        this.activeWidgetProps = widgetProps
-        localStorage.setItem('lastAiWidget', JSON.stringify({ route_code, widgetProps }));
+      
+      if (!widgetMap[code]) {
+        console.error('Unknown widget code:', code);
+        return;
+      }
+
+      try {
+        const module = await widgetMap[code]();
+        if (!module || !module.default) {
+          console.error('Failed to load widget module:', code);
+          return;
+        }
+
+        if (code === 'DASHBOARD_WIDGET') {
+          this.dashboardWidgetComponent = markRaw(module.default);
+          this.$nextTick(() => {
+            const layout = this.$refs.layoutContainer;
+            if (layout) {
+              const rect = layout.getBoundingClientRect();
+              const windowWidth = window.innerWidth;
+              const windowHeight = window.innerHeight;
+              
+              // 오버레이 크기 계산
+              const width = Math.min(windowWidth * 0.9, 1200);
+              const height = Math.min(windowHeight * 0.9, 800);
+              
+              this.overlayPos = null;
+              this.dashboardOverlayStyle = {
+                position: 'fixed',
+                top: '60%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: width + 'px',
+                height: height + 'px',
+                zIndex: 1000,
+                overflow: 'hidden',
+                transition: 'opacity 0.3s'
+              };
+              this.showDashboardOverlay = true;
+            }
+          });
+        } else {
+          this.activeWidgetComponent = markRaw(module.default);
+          this.activeWidgetKey += 1;
+          this.activeWidgetProps = widgetProps || {};
+          localStorage.setItem('lastAiWidget', JSON.stringify({ route_code, widgetProps }));
+        }
+      } catch (error) {
+        console.error('Error loading widget:', error);
       }
     },
     closeWidget() {
