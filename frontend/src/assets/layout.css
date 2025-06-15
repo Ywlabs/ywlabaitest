@@ -1,5 +1,10 @@
 /* 공통 레이아웃 및 사이드바 스타일 */
 
+body, #app {
+  min-width: 1200px;
+  overflow-x: auto;
+}
+
 .page-container {
   display: flex;
   gap: 3rem;
@@ -54,4 +59,14 @@
 
 .content {
   flex: 1;
+}
+
+.layout-container {
+  min-width: 1100px;
+}
+.left-column, .right-column {
+  min-width: 300px;
+}
+.center-column {
+  min-width: 350px;
 } 

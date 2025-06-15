@@ -72,13 +72,11 @@
         />
       </div>
     </div>
-    <FloatingMenu />
   </div>
 </template>
 
 <script>
 import AnimationBackground from '@/components/AnimationBackground.vue'
-import FloatingMenu from '@/components/FloatingMenu.vue'
 import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
@@ -100,7 +98,6 @@ export default {
   name: 'Home',
   components: { 
     AnimationBackground,
-    FloatingMenu,
     EnvironmentWidget,
     SalesWidget,
     ChatInterface
@@ -300,136 +297,6 @@ export default {
 </script>
 
 <style scoped>
-/* ===== 기존 스타일 백업 (아래 새 스타일 적용, 이상하면 이 부분 복원) =====
-기존 스타일 전체는 이 주석 안에 있습니다. 필요시 복원하세요.
-*/
-
-.message {
-  margin-bottom: 32px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 질문(오른쪽, 파란 말풍선) */
-.user-message {
-  align-items: flex-end;
-}
-.user-message .message-content {
-  background: linear-gradient(135deg, #4f8cff 0%, #2355d6 100%);
-  color: #fff;
-  border-radius: 18px !important;
-  margin-left: 25%;
-  max-width: 70%;
-  padding: 16px 22px;
-  font-size: 1.05em;
-  box-shadow: 0 4px 16px rgba(79,140,255,0.08);
-  position: relative;
-  word-break: break-word;
-  transition: background 0.2s;
-}
-
-/* 답변(왼쪽, 흰색 말풍선+그림자) */
-.ai-message {
-  align-items: flex-start;
-}
-.ai-message .message-content {
-  background: #fff;
-  color: #222;
-  border-radius: 18px !important;
-  margin-right: 30%;
-  max-width: 70%;
-  padding: 12px 16px;
-  font-size: 0.98em;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  position: relative;
-  word-break: break-word;
-  border: 1px solid #e6eaf1;
-  transition: background 0.2s;
-}
-
-/* 말풍선 꼬리(선택, 더 세련되게 하고 싶을 때) */
-.user-message .message-content::after {
-  content: '';
-  position: absolute;
-  right: -12px;
-  bottom: 12px;
-  border-width: 8px 0 8px 12px;
-  border-style: solid;
-  border-color: transparent transparent transparent #4f8cff;
-  filter: drop-shadow(0 2px 2px rgba(79,140,255,0.08));
-}
-.ai-message .message-content::after {
-  content: '';
-  position: absolute;
-  left: -12px;
-  bottom: 12px;
-  border-width: 8px 12px 8px 0;
-  border-style: solid;
-  border-color: transparent #fff transparent transparent;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.08));
-}
-
-/* 표(직원 정보)는 카드 느낌 */
-.employee-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 12px 0 8px 0;
-  background: #f7faff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(79,140,255,0.07);
-  overflow: hidden;
-}
-.employee-table th {
-  background: #e6eaf1;
-  text-align: left;
-  padding: 8px 14px;
-  font-weight: 600;
-  color: #2355d6;
-  width: 90px;
-  border-bottom: 1px solid #e6eaf1;
-}
-.employee-table td {
-  background: #f7faff;
-  padding: 8px 14px;
-  color: #222;
-  border-bottom: 1px solid #e6eaf1;
-}
-.employee-table tr:last-child th,
-.employee-table tr:last-child td {
-  border-bottom: none;
-}
-
-/* 버튼(더 둥글고 컬러풀하게) */
-.action-button {
-  margin-top: 18px;
-  padding: 10px 24px;
-  background: linear-gradient(90deg, #4f8cff 0%, #2355d6 100%);
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(79,140,255,0.10);
-  transition: background 0.2s, box-shadow 0.2s;
-  display: block;
-  width: auto;
-}
-.action-button:hover {
-  background: linear-gradient(90deg, #2355d6 0%, #4f8cff 100%);
-  box-shadow: 0 4px 16px rgba(79,140,255,0.15);
-}
-.action-button + .action-button {
-  margin-top: 10px;
-}
-
-/* 질문-답변 쌍 사이 간격 */
-.user-message + .ai-message,
-.ai-message + .user-message {
-  margin-top: 40px;
-}
-
 .home {
   width: 100%;
   min-height: 100vh;
@@ -445,14 +312,10 @@ export default {
   display: flex;
   gap: 20px;
   max-width: 1400px;
-  margin: 32px auto 0 auto;
+  margin: 100px auto 0 auto;
   height: calc(100vh - 40px);
   align-items: flex-start;
   position: relative;
-}
-
-.left-column, .center-column, .right-column {
-  font-size: 0.92em;
 }
 
 .left-column {

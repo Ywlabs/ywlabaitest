@@ -1,265 +1,274 @@
 <template>
   <div class="social">
-    <h1>사회공헌</h1>
-    <div class="social-content">
-      <div class="social-header">
-        <h2>더 나은 사회를 위한 기여</h2>
-        <p class="subtitle">영우랩스는 기술의 힘으로 사회적 가치를 창출합니다.</p>
-      </div>
-
-      <div class="social-sections">
-        <div class="section">
-          <h3>교육 지원</h3>
-          <ul>
-            <li>IT 교육 프로그램 운영</li>
-            <li>장학금 지원</li>
-            <li>멘토링 프로그램</li>
-            <li>기술 교육 콘텐츠 제공</li>
-          </ul>
-        </div>
-
-        <div class="section">
-          <h3>지역 사회 기여</h3>
-          <ul>
-            <li>지역 축제 지원</li>
-            <li>봉사 활동 참여</li>
-            <li>지역 기업 협력</li>
-            <li>문화 행사 후원</li>
-          </ul>
-        </div>
-
-        <div class="section">
-          <h3>기술 나눔</h3>
-          <ul>
-            <li>오픈소스 프로젝트</li>
-            <li>기술 세미나 개최</li>
-            <li>스타트업 멘토링</li>
-            <li>기술 공유 프로그램</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="social-programs">
-        <h3>주요 사회공헌 프로그램</h3>
-        <div class="program-grid">
-          <div class="program-item">
-            <h4>코딩 교육</h4>
-            <p>청소년을 위한 무료 코딩 교육 프로그램 운영</p>
-            <ul>
-              <li>주 1회 정기 교육</li>
-              <li>실무 프로젝트 참여</li>
-              <li>멘토링 제공</li>
-            </ul>
-          </div>
-          <div class="program-item">
-            <h4>기술 나눔</h4>
-            <p>지역 기업 대상 기술 지원 프로그램</p>
-            <ul>
-              <li>기술 컨설팅</li>
-              <li>디지털 전환 지원</li>
-              <li>맞춤형 솔루션 제공</li>
-            </ul>
-          </div>
-          <div class="program-item">
-            <h4>사회혁신</h4>
-            <p>사회문제 해결을 위한 기술 프로젝트</p>
-            <ul>
-              <li>공공 서비스 개발</li>
-              <li>사회적 기업 지원</li>
-              <li>혁신 아이디어 발굴</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="social-impact">
-        <h3>사회적 영향</h3>
-        <div class="impact-stats">
-          <div class="stat-item">
-            <span class="number">1,000+</span>
-            <span class="label">교육 수혜자</span>
-          </div>
-          <div class="stat-item">
-            <span class="number">50+</span>
-            <span class="label">지원 기업</span>
-          </div>
-          <div class="stat-item">
-            <span class="number">100+</span>
-            <span class="label">봉사 시간</span>
-          </div>
-        </div>
+    <div class="social-header">
+      <i class="fas fa-hands-helping"></i>
+      <div class="header-text">
+        <h2>사회공헌</h2>
+        <p class="slogan">기술로 만드는 따뜻한 세상</p>
       </div>
     </div>
-    <FloatingMenu />
+    <div class="social-content">
+      <section class="vision-section">
+        <h3>사회공헌 비전</h3>
+        <p>영우랩스는 '기술로 만드는 따뜻한 세상'을 실현하기 위해 다양한 사회공헌 활동을 펼치고 있습니다. 임직원과 함께하는 나눔 문화를 통해 지역사회와 상생하는 기업이 되겠습니다.</p>
+      </section>
+
+      <section class="programs-section">
+        <h3>주요 사회공헌 프로그램</h3>
+        <div class="programs-grid">
+          <div class="program-card">
+            <h4>기술 나눔</h4>
+            <ul>
+              <li>청소년 코딩 교육 지원</li>
+              <li>디지털 격차 해소 프로그램</li>
+              <li>IT 멘토링 활동</li>
+            </ul>
+          </div>
+
+          <div class="program-card">
+            <h4>인재 육성</h4>
+            <ul>
+              <li>장학금 지원</li>
+              <li>인턴십 프로그램</li>
+              <li>취업 멘토링</li>
+            </ul>
+          </div>
+
+          <div class="program-card">
+            <h4>지역 상생</h4>
+            <ul>
+              <li>지역 축제 지원</li>
+              <li>소상공인 지원</li>
+              <li>지역 문화 프로그램</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="activities-section">
+        <h3>최근 사회공헌 활동</h3>
+        <div class="activities-timeline">
+          <div class="activity-item">
+            <div class="activity-date">2024.03</div>
+            <div class="activity-content">
+              <h4>청소년 코딩 캠프</h4>
+              <p>전국 100명의 청소년을 대상으로 AI 코딩 교육 실시</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="activity-date">2024.02</div>
+            <div class="activity-content">
+              <h4>디지털 교육 지원</h4>
+              <p>지역 아동센터에 컴퓨터 기기 및 교육 프로그램 지원</p>
+            </div>
+          </div>
+
+          <div class="activity-item">
+            <div class="activity-date">2024.01</div>
+            <div class="activity-content">
+              <h4>연말 나눔 행사</h4>
+              <p>임직원 참여 봉사활동 및 연말 기부금 전달</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="participation-section">
+        <h3>임직원 참여</h3>
+        <div class="participation-stats">
+          <div class="stat-item">
+            <div class="stat-number">85%</div>
+            <p>임직원 참여율</p>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">1,200</div>
+            <p>연간 봉사 시간</p>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">15</div>
+            <p>지원 단체 수</p>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'Social',
-  components: { FloatingMenu },
-  methods: {
-    navigateTo(url) {
-      if (url) {
-        this.$router.push(url)
-      }
-    }
-  }
+  name: 'Social'
 }
 </script>
 
 <style scoped>
 .social {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 2rem;
-}
-
-.social-content {
-  margin-top: 2rem;
 }
 
 .social-header {
-  text-align: center;
-  margin-bottom: 3rem;
+  display: flex;
+  align-items: center;
+  background: #f7f3fa;
+  border-radius: 10px;
+  padding: 1.5rem 2rem 1.5rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(66,185,131,0.07);
 }
-
-.social-header h2 {
-  color: #2c3e50;
+.social-header i {
+  font-size: 2.5rem;
+  color: #a259c4;
+  margin-right: 1.5rem;
+}
+.social-header .header-text h2 {
+  color: #a259c4;
+  margin-bottom: 0.3rem;
   font-size: 2rem;
-  margin-bottom: 1rem;
+}
+.social-header .slogan {
+  color: #4a4a4a;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
 }
 
-.subtitle {
-  color: #666;
+.social-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+section {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+section h3 {
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+}
+
+.vision-section p {
+  color: #4a4a4a;
+  line-height: 1.8;
+  font-size: 1.1rem;
+}
+
+.programs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.program-card {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.program-card h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
   font-size: 1.2rem;
 }
 
-.social-sections {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-.section {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.section h3 {
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
-}
-
-.section ul {
-  list-style-type: none;
+.program-card ul {
+  list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.section li {
-  color: #666;
-  margin-bottom: 1rem;
-  padding-left: 1.5rem;
-  position: relative;
-}
-
-.section li::before {
-  content: '•';
-  color: #42b983;
-  position: absolute;
-  left: 0;
-}
-
-.social-programs {
-  background: #f8f9fa;
-  padding: 2rem;
-  border-radius: 8px;
-  margin-bottom: 3rem;
-}
-
-.social-programs h3 {
-  color: #2c3e50;
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.program-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.program-item {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.program-item h4 {
-  color: #2c3e50;
-  margin-bottom: 1rem;
-}
-
-.program-item p {
-  color: #666;
-  margin-bottom: 1rem;
-}
-
-.program-item ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.program-item li {
-  color: #666;
+.program-card li {
+  color: #4a4a4a;
   margin-bottom: 0.5rem;
-  padding-left: 1.5rem;
+  padding-left: 1.2rem;
   position: relative;
 }
 
-.program-item li::before {
+.program-card li::before {
   content: '•';
   color: #42b983;
   position: absolute;
   left: 0;
 }
 
-.social-impact {
-  text-align: center;
+.activities-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.social-impact h3 {
-  color: #2c3e50;
-  margin-bottom: 2rem;
-}
-
-.impact-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.activity-item {
+  display: flex;
   gap: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.activity-date {
+  min-width: 100px;
+  color: #42b983;
+  font-weight: bold;
+}
+
+.activity-content h4 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.activity-content p {
+  color: #4a4a4a;
+  margin: 0;
+}
+
+.participation-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  text-align: center;
 }
 
 .stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: 1.5rem;
 }
 
-.number {
+.stat-number {
   font-size: 2.5rem;
   font-weight: bold;
   color: #42b983;
   margin-bottom: 0.5rem;
 }
 
-.label {
-  color: #666;
-  font-size: 1.1rem;
+.stat-item p {
+  color: #4a4a4a;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .programs-grid,
+  .participation-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .programs-grid,
+  .participation-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-item {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .activity-date {
+    min-width: auto;
+  }
 }
 </style> 

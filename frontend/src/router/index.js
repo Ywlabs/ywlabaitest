@@ -1,5 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import AICDMS from '@/views/solutions/AICDMS.vue'
+import AIMASASIKI from '@/views/solutions/AIMASASIKI.vue'
+import AIEMS from '@/views/solutions/AIEMS.vue'
+import AIGENIUS from '@/views/solutions/AIGENIUS.vue'
 
 const routes = [
   {
@@ -12,6 +16,10 @@ const routes = [
     name: 'About',
     component: () => import('../views/about/About.vue'),
     children: [
+      {
+        path: '',
+        redirect: '/about/greeting'
+      },
       {
         path: 'greeting',
         name: 'Greeting',
@@ -40,19 +48,28 @@ const routes = [
     component: () => import('../views/solutions/Solutions.vue'),
     children: [
       {
-        path: 'aicdms',
-        name: 'AICDMS',
-        component: () => import('../views/solutions/AICDMS.vue')
+        path: '',
+        redirect: '/solutions/aigenius'
       },
       {
-        path: 'aimasasiki',
-        name: 'AIMASASIKI',
-        component: () => import('../views/solutions/AIMASASIKI.vue')
+        path: 'aigenius',
+        name: 'AIGENIUS',
+        component: AIGENIUS
       },
       {
         path: 'aiems',
         name: 'AIEMS',
-        component: () => import('../views/solutions/AIEMS.vue')
+        component: AIEMS
+      },
+      {
+        path: 'aicdms',
+        name: 'AICDMS',
+        component: AICDMS
+      },
+      {
+        path: 'aimasasiki',
+        name: 'AIMASASIKI',
+        component: AIMASASIKI
       }
     ]
   },
@@ -61,6 +78,10 @@ const routes = [
     name: 'ESG',
     component: () => import('../views/esg/ESG.vue'),
     children: [
+      {
+        path: '',
+        redirect: '/esg/compliance'
+      },
       {
         path: 'compliance',
         name: 'Compliance',

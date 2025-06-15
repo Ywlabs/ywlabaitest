@@ -1,16 +1,12 @@
 <template>
   <div class="about">
     <!-- 기존 내용 -->
-    <FloatingMenu />
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'AboutView',
-  components: { FloatingMenu }
+  name: 'AboutView'
 }
 </script>
 

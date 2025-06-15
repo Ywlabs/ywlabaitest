@@ -1,183 +1,211 @@
 <template>
   <div class="environment">
-    <h1>환경경영</h1>
-    <div class="environment-content">
-      <div class="environment-header">
-        <h2>지속가능한 환경 경영</h2>
-        <p class="subtitle">영우랩스는 환경 보호를 위한 책임 있는 경영을 실천합니다.</p>
-      </div>
-
-      <div class="environment-sections">
-        <div class="section">
-          <h3>환경 경영 목표</h3>
-          <ul>
-            <li>탄소중립 달성</li>
-            <li>에너지 효율성 향상</li>
-            <li>자원 재활용 확대</li>
-            <li>친환경 제품 개발</li>
-          </ul>
-        </div>
-
-        <div class="section">
-          <h3>주요 환경 활동</h3>
-          <ul>
-            <li>재생에너지 사용 확대</li>
-            <li>폐기물 감량 및 재활용</li>
-            <li>녹색 물류 시스템 구축</li>
-            <li>환경 교육 프로그램 운영</li>
-          </ul>
-        </div>
-
-        <div class="section">
-          <h3>환경 성과</h3>
-          <ul>
-            <li>탄소배출량 감소</li>
-            <li>에너지 사용량 절감</li>
-            <li>재활용률 향상</li>
-            <li>친환경 인증 획득</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="environment-initiatives">
-        <h3>환경 보호 이니셔티브</h3>
-        <div class="initiative-grid">
-          <div class="initiative-item">
-            <h4>그린 오피스</h4>
-            <p>사무실 내 에너지 절약 및 친환경 소재 사용</p>
-          </div>
-          <div class="initiative-item">
-            <h4>친환경 개발</h4>
-            <p>저전력 소프트웨어 솔루션 개발</p>
-          </div>
-          <div class="initiative-item">
-            <h4>녹색 물류</h4>
-            <p>친환경 운송 및 배송 시스템 구축</p>
-          </div>
-          <div class="initiative-item">
-            <h4>환경 교육</h4>
-            <p>직원 대상 환경 보호 교육 프로그램</p>
-          </div>
-        </div>
+    <div class="environment-header">
+      <i class="fas fa-leaf"></i>
+      <div class="header-text">
+        <h2>환경경영</h2>
+        <p class="slogan">지속가능한 미래, 친환경 혁신</p>
       </div>
     </div>
-    <FloatingMenu />
+    <div class="environment-content">
+      <section class="vision-section">
+        <h3>환경경영 비전</h3>
+        <p>영우랩스는 '2050 탄소중립' 실현을 위한 환경경영을 추진하고 있습니다. 친환경 기술 혁신과 지속가능한 생산체계 구축을 통해 미래 세대를 위한 환경 보호에 기여하겠습니다.</p>
+      </section>
+
+      <section class="initiatives-section">
+        <h3>주요 환경경영 이니셔티브</h3>
+        <div class="initiatives-grid">
+          <div class="initiative-card">
+            <h4>탄소배출량 감축</h4>
+            <ul>
+              <li>사무실 전기 사용량 20% 감축 목표</li>
+              <li>클라우드 서버 에너지 효율화</li>
+              <li>재택근무 확대를 통한 이동 배출량 감소</li>
+            </ul>
+          </div>
+
+          <div class="initiative-card">
+            <h4>친환경 제품 개발</h4>
+            <ul>
+              <li>AI 기반 에너지 최적화 솔루션 개발</li>
+              <li>친환경 소프트웨어 아키텍처 설계</li>
+              <li>그린 IT 기술 연구 및 적용</li>
+            </ul>
+          </div>
+
+          <div class="initiative-card">
+            <h4>자원 재활용</h4>
+            <ul>
+              <li>전자폐기물 재활용 프로그램 운영</li>
+              <li>종이 사용량 최소화 및 디지털화</li>
+              <li>재사용 가능한 개발 환경 구축</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="achievements-section">
+        <h3>환경경영 성과</h3>
+        <div class="achievements-grid">
+          <div class="achievement-item">
+            <div class="achievement-number">30%</div>
+            <p>전년 대비 탄소배출량 감소</p>
+          </div>
+          <div class="achievement-item">
+            <div class="achievement-number">100%</div>
+            <p>재생에너지 전력 사용</p>
+          </div>
+          <div class="achievement-item">
+            <div class="achievement-number">50%</div>
+            <p>종이 사용량 감소</p>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'Environment',
-  components: { FloatingMenu },
-  methods: {
-    navigateTo(url) {
-      if (url) {
-        this.$router.push(url)
-      }
-    }
-  }
+  name: 'Environment'
 }
 </script>
 
 <style scoped>
 .environment {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 2rem;
+}
+
+.environment h2 {
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
 }
 
 .environment-content {
-  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
 }
 
-.environment-header {
-  text-align: center;
-  margin-bottom: 3rem;
+section {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.environment-header h2 {
+section h3 {
   color: #2c3e50;
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
 }
 
-.subtitle {
-  color: #666;
+.vision-section p {
+  color: #4a4a4a;
+  line-height: 1.8;
+  font-size: 1.1rem;
+}
+
+.initiatives-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+.initiative-card {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+.initiative-card h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
   font-size: 1.2rem;
 }
 
-.environment-sections {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
-}
-
-.section {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.section h3 {
-  color: #2c3e50;
-  margin-bottom: 1.5rem;
-}
-
-.section ul {
-  list-style-type: none;
+.initiative-card ul {
+  list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.section li {
-  color: #666;
-  margin-bottom: 1rem;
-  padding-left: 1.5rem;
+.initiative-card li {
+  color: #4a4a4a;
+  margin-bottom: 0.5rem;
+  padding-left: 1.2rem;
   position: relative;
 }
 
-.section li::before {
+.initiative-card li::before {
   content: '•';
   color: #42b983;
   position: absolute;
   left: 0;
 }
 
-.environment-initiatives {
-  background: #f8f9fa;
-  padding: 2rem;
-  border-radius: 8px;
-}
-
-.environment-initiatives h3 {
-  color: #2c3e50;
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.initiative-grid {
+.achievements-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 2rem;
+  text-align: center;
 }
 
-.initiative-item {
-  background: white;
+.achievement-item {
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.initiative-item h4 {
+.achievement-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #42b983;
+  margin-bottom: 0.5rem;
+}
+
+.achievement-item p {
+  color: #4a4a4a;
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .initiatives-grid,
+  .achievements-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .initiatives-grid,
+  .achievements-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.environment-header {
+  display: flex;
+  align-items: center;
+  background: #eafaf2;
+  border-radius: 10px;
+  padding: 1.5rem 2rem 1.5rem 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(66,185,131,0.07);
+}
+.environment-header i {
+  font-size: 2.5rem;
+  color: #42b983;
+  margin-right: 1.5rem;
+}
+.environment-header .header-text h2 {
   color: #2c3e50;
-  margin-bottom: 1rem;
+  margin-bottom: 0.3rem;
+  font-size: 2rem;
 }
-
-.initiative-item p {
-  color: #666;
-  line-height: 1.6;
+.environment-header .slogan {
+  color: #388e3c;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
 }
 </style> 

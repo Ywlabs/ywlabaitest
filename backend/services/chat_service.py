@@ -19,6 +19,7 @@ import logging
 import re
 from core.utils.date_utils import extract_year
 from core.utils.employee_utils import extract_employee_name
+from core.profiles.prompt_utils import format_system_prompt
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ def create_response(
         
     return response_data
 
+# GPT 응답 생성 함수
 def get_gpt_response(question: str, chat_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     """
     [GPT 응답 생성]
@@ -113,15 +115,9 @@ def get_gpt_response(question: str, chat_history: Optional[List[Dict[str, str]]]
         logger.info(f"[2단계] GPT 응답 생성 시작 (LangChain) [USER] {question}")
         gpt_start = time.time()
         
-        # 2-1. 시스템 프롬프트 설정
-        system_prompt = """당신은 회사 정책을 안내하는 AI 어시스턴트입니다.
-다음 규칙을 반드시 지켜주세요:
-1. 제공된 정책 내용만을 기반으로 최대한 친절하게 답변하세요.
-2. 정책에 없는 내용은 추가하지 마세요.
-3. 정책 내용을 그대로 복사하지 말고, 사용자가 이해하기 쉽게 정리해서 설명하세요.
-4. 표 형식은 markdown 형식으로 깔끔하게 정리해주세요.
-5. 정책 내용이 불충분한 경우, '해당 내용에 대한 추가 정책 정보가 필요합니다.'라고 답변하세요."""
-
+        # 2-1. 시스템 프롬프트 설정 (프로필에서 로드)
+        system_prompt = format_system_prompt("policy_assistant")
+        
         # 2-2. 메시지 구성
         messages = [
             {"role": "system", "content": system_prompt},
@@ -358,7 +354,7 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
     [AI 응답 생성]
     - 입력: 
         - question: 사용자의 질문(문자열)
-        - chat_history: 이전 대화 기록 (선택)
+        - chat_history: 이전 대화 기록 (선택) : 연속된 질문을 위해 사용
     - 동작: 
         - DB 기반 응답 시도
         - 실패 시 GPT 기반 응답 생성
@@ -383,7 +379,7 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
         else:
             logger.warning(f"[1단계 완료] DB 기반 응답 실패 (소요시간: {db_time:.2f}초)")
             
-        # 2. GPT 기반 응답 생성
+        # 2. GPT 기반 응답 생성 / 응답 타입이 none 이면 다음 단계 진행
         logger.info(f"[2단계] GPT 기반 응답 생성 시작 [USER] {question}")
         gpt_start = time.time()
         gpt_response = get_gpt_response(question, chat_history)

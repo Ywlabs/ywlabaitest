@@ -1,11 +1,11 @@
 <template>
-  <div class="aiems">
-    <h2>AI 기반 에너지 관리</h2>
+  <div class="aicms">
+    <h2>AI 기반 고객 관리</h2>
     
-    <div class="aiems-content">
+    <div class="aicms-content">
       <section class="overview-section">
         <h3>솔루션 개요</h3>
-        <p>AIEMS(AI Energy Management System)는 영우랩스의 특화된 AI 기술을 활용한 스마트 에너지 관리 솔루션입니다. 실시간 에너지 모니터링, 탄소중립 관리, 생성형 AI 기반 최적화로 기업의 에너지 효율을 극대화합니다.</p>
+        <p>AICMS(AI Customer Management System)는 인공지능을 활용한 스마트 고객 관리 솔루션입니다. 고객 데이터 분석과 AI 기반 예측으로 고객 만족도를 높이고 비즈니스 성과를 개선합니다.</p>
       </section>
 
       <section class="features-section">
@@ -13,37 +13,37 @@
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-chart-line"></i>
+              <i class="fas fa-users"></i>
             </div>
-            <h4>에너지 통합 대시보드</h4>
+            <h4>고객 프로파일링</h4>
             <ul>
-              <li>실시간 에너지 사용량 모니터링</li>
-              <li>다양한 에너지원 통합 관리</li>
-              <li>직관적인 데이터 시각화</li>
+              <li>고객 행동 패턴 분석</li>
+              <li>세그먼트 자동 분류</li>
+              <li>맞춤형 프로필 생성</li>
             </ul>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-leaf"></i>
+              <i class="fas fa-comments"></i>
             </div>
-            <h4>탄소중립 대시보드</h4>
+            <h4>스마트 상담</h4>
             <ul>
-              <li>탄소배출량 실시간 추적</li>
-              <li>탄소중립 목표 달성 관리</li>
-              <li>ESG 지표 통합 분석</li>
+              <li>AI 챗봇 상담</li>
+              <li>감정 분석 기반 응대</li>
+              <li>실시간 상담 품질 관리</li>
             </ul>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-robot"></i>
+              <i class="fas fa-chart-pie"></i>
             </div>
-            <h4>생성형 AI 최적화</h4>
+            <h4>데이터 분석</h4>
             <ul>
-              <li>AI 기반 에너지 사용 최적화</li>
-              <li>맞춤형 절감 방안 제안</li>
-              <li>예측적 유지보수 관리</li>
+              <li>고객 만족도 분석</li>
+              <li>이탈 위험 예측</li>
+              <li>맞춤형 마케팅 제안</li>
             </ul>
           </div>
         </div>
@@ -54,15 +54,15 @@
         <div class="benefits-grid">
           <div class="benefit-item">
             <div class="benefit-number">40%</div>
-            <p>에너지 비용 절감</p>
+            <p>고객 만족도 향상</p>
           </div>
           <div class="benefit-item">
             <div class="benefit-number">35%</div>
-            <p>탄소배출량 감소</p>
+            <p>상담 처리 시간 단축</p>
           </div>
           <div class="benefit-item">
-            <div class="benefit-number">98%</div>
-            <p>예측 정확도</p>
+            <div class="benefit-number">25%</div>
+            <p>고객 이탈률 감소</p>
           </div>
         </div>
       </section>
@@ -73,24 +73,24 @@
           <div class="case-item">
             <div class="case-date">2024.03</div>
             <div class="case-content">
-              <h4>제조업체 A사</h4>
-              <p>탄소중립 목표 2년 조기 달성</p>
+              <h4>금융기관 A사</h4>
+              <p>고객 만족도 45% 향상 달성</p>
             </div>
           </div>
 
           <div class="case-item">
             <div class="case-date">2024.02</div>
             <div class="case-content">
-              <h4>상업시설 B사</h4>
-              <p>에너지 비용 45% 절감 달성</p>
+              <h4>통신사 B사</h4>
+              <p>상담 처리 시간 40% 단축</p>
             </div>
           </div>
 
           <div class="case-item">
             <div class="case-date">2024.01</div>
             <div class="case-content">
-              <h4>공공기관 C사</h4>
-              <p>ESG 평가 등급 2단계 상승</p>
+              <h4>유통업체 C사</h4>
+              <p>고객 이탈률 30% 감소</p>
             </div>
           </div>
         </div>
@@ -99,24 +99,18 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AIEMS'
-}
-</script>
-
 <style scoped>
-.aiems {
+.aicms {
   padding: 2rem;
 }
 
-.aiems h2 {
+.aicms h2 {
   color: #2c3e50;
   margin-bottom: 2rem;
   font-size: 1.8rem;
 }
 
-.aiems-content {
+.aicms-content {
   display: flex;
   flex-direction: column;
   gap: 3rem;

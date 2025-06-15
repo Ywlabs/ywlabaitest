@@ -6,7 +6,7 @@
       </router-link>
       <div class="nav-links">
         <div class="nav-item">
-          <router-link to="/about" class="nav-link">회사소개</router-link>
+          <a href="/about" class="nav-link">회사소개</a>
           <div class="dropdown-content">
             <router-link to="/about/greeting">인사말</router-link>
             <router-link to="/about/history">걸어온길</router-link>
@@ -15,20 +15,24 @@
           </div>
         </div>
         <div class="nav-item">
-          <router-link to="/solutions" class="nav-link">솔루션</router-link>
+          <a href="/solutions" class="nav-link">솔루션</a>
           <div class="dropdown-content">
+            <router-link to="/solutions/aigenius">AIGENIUS</router-link>
+            <router-link to="/solutions/aiems">AIEMS</router-link>
             <router-link to="/solutions/aicdms">AICDMS</router-link>
             <router-link to="/solutions/aimasasiki">AIMASASIKI</router-link>
-            <router-link to="/solutions/aiems">AIEMS</router-link>
           </div>
         </div>
         <div class="nav-item">
-          <router-link to="/esg" class="nav-link">ESG</router-link>
+          <a href="/esg" class="nav-link">ESG</a>
           <div class="dropdown-content">
             <router-link to="/esg/compliance">준법경영</router-link>
             <router-link to="/esg/environment">환경경영</router-link>
             <router-link to="/esg/social">사회공헌</router-link>
           </div>
+        </div>
+        <div class="nav-item">
+          <a href="/contact" class="nav-link">문의하기</a>
         </div>
       </div>
     </nav>
@@ -37,21 +41,7 @@
 
 <script>
 export default {
-  data() {
-    return {
-      activeDropdown: null
-    }
-  },
-  methods: {
-    toggleDropdown(name) {
-      this.activeDropdown = this.activeDropdown === name ? null : name
-    }
-  },
-  watch: {
-    $route() {
-      this.activeDropdown = null
-    }
-  }
+  name: 'Header'
 }
 </script>
 
@@ -67,9 +57,11 @@ export default {
 }
 
 .nav {
+  width: 100%;
+  box-sizing: border-box;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 1rem 0 1rem 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -79,17 +71,18 @@ export default {
   display: flex;
   align-items: center;
   text-decoration: none;
+  margin: 0;
 }
 
 .logo-img {
   height: 36px;
-  margin-right: 10px;
   vertical-align: middle;
 }
 
 .nav-links {
   display: flex;
-  gap: 2rem;
+  gap: 2.5rem;
+  align-items: center;
 }
 
 .nav-item {
@@ -102,6 +95,7 @@ export default {
   font-weight: 500;
   padding: 0.5rem 1rem;
   transition: color 0.3s;
+  cursor: pointer;
 }
 
 .nav-link:hover {
@@ -118,6 +112,7 @@ export default {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   border-radius: 4px;
   padding: 0.5rem 0;
+  z-index: 1001;
 }
 
 .nav-item:hover .dropdown-content {
@@ -139,5 +134,6 @@ export default {
 
 .router-link-active {
   color: #42b983;
+  font-weight: 600;
 }
 </style> 

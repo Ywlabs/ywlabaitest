@@ -3,32 +3,32 @@
     <h1>AICDMS</h1>
     <div class="solution-content">
       <div class="solution-header">
-        <h2>AI 기반 문서 관리 시스템</h2>
-        <p class="subtitle">스마트 문서 관리를 위한 AI 솔루션</p>
+        <h2>AI 기반 중대재해 모니터링 시스템</h2>
+        <p class="subtitle">스마트 안전 관리를 위한 AI 솔루션</p>
       </div>
       
       <div class="solution-features">
         <div class="feature">
-          <h3>자동 문서 분류</h3>
-          <p>AI 기반 문서 자동 분류 및 태깅</p>
+          <h3>실시간 위험 감지</h3>
+          <p>AI 기반 실시간 안전 위험 요소 감지 및 분석</p>
         </div>
         <div class="feature">
-          <h3>문서 검색</h3>
-          <p>의미 기반 지능형 문서 검색</p>
+          <h3>예측적 안전 관리</h3>
+          <p>중대재해 발생 가능성 사전 예측 및 대응</p>
         </div>
         <div class="feature">
-          <h3>데이터 추출</h3>
-          <p>OCR 및 AI 기반 문서 데이터 자동 추출</p>
+          <h3>자동 대응 시스템</h3>
+          <p>위험 상황 발생 시 자동 대응 및 보고 체계</p>
         </div>
       </div>
 
       <div class="solution-benefits">
         <h3>주요 효과</h3>
         <ul>
-          <li>문서 처리 시간 50% 단축</li>
-          <li>검색 정확도 40% 향상</li>
-          <li>데이터 입력 오류 60% 감소</li>
-          <li>문서 관리 비용 30% 절감</li>
+          <li>안전사고 예방률 70% 향상</li>
+          <li>위험 감지 시간 80% 단축</li>
+          <li>안전 관리 비용 40% 절감</li>
+          <li>긴급 대응 시간 60% 감소</li>
         </ul>
       </div>
 
@@ -38,17 +38,12 @@
         <router-link to="/contact" class="contact-button">문의하기</router-link>
       </div>
     </div>
-    <FloatingMenu />
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'AICDMS',
-  components: { FloatingMenu },
-  // ...기존 코드...
+  name: 'AICDMS'
 }
 </script>
 

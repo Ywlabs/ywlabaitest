@@ -37,23 +37,12 @@
         </div>
       </div>
     </div>
-    <FloatingMenu />
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'Location',
-  components: { FloatingMenu },
-  methods: {
-    navigateTo(url) {
-      if (url) {
-        this.$router.push(url)
-      }
-    }
-  }
+  name: 'Location'
 }
 </script>
 

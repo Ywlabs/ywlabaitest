@@ -1,67 +1,97 @@
 <template>
   <div class="history">
-    <h1>걸어온길</h1>
+    <h2>걸어온 길</h2>
     <div class="history-content">
       <div class="timeline">
         <div class="timeline-item">
-          <div class="year">2023</div>
-          <div class="event">
-            <h3>AIEMS 솔루션 출시</h3>
-            <p>에너지 관리 시스템 솔루션 출시</p>
+          <div class="year">2024</div>
+          <div class="events">
+            <div class="event">
+              <span class="month">03</span>
+              <p>AI 챗봇 솔루션 'ChatGPT Plus' 출시</p>
+            </div>
+            <div class="event">
+              <span class="month">01</span>
+              <p>시리즈 A 투자 유치 (50억원)</p>
+            </div>
           </div>
         </div>
+
+        <div class="timeline-item">
+          <div class="year">2023</div>
+          <div class="events">
+            <div class="event">
+              <span class="month">12</span>
+              <p>대한민국 ICT 대상 수상</p>
+            </div>
+            <div class="event">
+              <span class="month">09</span>
+              <p>자연어 처리 엔진 'NLP Core' 출시</p>
+            </div>
+            <div class="event">
+              <span class="month">06</span>
+              <p>해외 지사 설립 (싱가포르)</p>
+            </div>
+          </div>
+        </div>
+
         <div class="timeline-item">
           <div class="year">2022</div>
-          <div class="event">
-            <h3>AIMASASIKI 솔루션 출시</h3>
-            <p>제조 생산성 향상 솔루션 출시</p>
+          <div class="events">
+            <div class="event">
+              <span class="month">12</span>
+              <p>벤처기업 인증 획득</p>
+            </div>
+            <div class="event">
+              <span class="month">08</span>
+              <p>AI 기반 문서 분석 솔루션 출시</p>
+            </div>
           </div>
         </div>
+
         <div class="timeline-item">
           <div class="year">2021</div>
-          <div class="event">
-            <h3>AICDMS 솔루션 출시</h3>
-            <p>문서 관리 시스템 솔루션 출시</p>
+          <div class="events">
+            <div class="event">
+              <span class="month">12</span>
+              <p>시드 투자 유치 (20억원)</p>
+            </div>
+            <div class="event">
+              <span class="month">06</span>
+              <p>첫 번째 AI 솔루션 출시</p>
+            </div>
           </div>
         </div>
+
         <div class="timeline-item">
           <div class="year">2020</div>
-          <div class="event">
-            <h3>영우랩스 설립</h3>
-            <p>AI 솔루션 전문 기업으로 시작</p>
+          <div class="events">
+            <div class="event">
+              <span class="month">03</span>
+              <p>영우랩스 설립</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    <FloatingMenu />
   </div>
 </template>
 
 <script>
-import FloatingMenu from '@/components/FloatingMenu.vue'
-
 export default {
-  name: 'History',
-  components: { FloatingMenu },
-  methods: {
-    navigateTo(url) {
-      if (url) {
-        this.$router.push(url)
-      }
-    }
-  }
+  name: 'History'
 }
 </script>
 
 <style scoped>
 .history {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: 2rem;
 }
 
-.history-content {
-  margin-top: 2rem;
+.history h2 {
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  font-size: 1.8rem;
 }
 
 .timeline {
@@ -72,45 +102,61 @@ export default {
 .timeline::before {
   content: '';
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 120px;
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 100%;
   background: #e0e0e0;
 }
 
 .timeline-item {
   display: flex;
-  justify-content: center;
-  align-items: center;
   margin-bottom: 3rem;
   position: relative;
 }
 
 .year {
-  background: #42b983;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
+  width: 100px;
+  font-size: 1.4rem;
   font-weight: bold;
-  margin: 0 2rem;
+  color: #2c3e50;
+  text-align: right;
+  padding-right: 2rem;
+}
+
+.events {
+  flex: 1;
+  padding-left: 2rem;
 }
 
 .event {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  width: 300px;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  position: relative;
 }
 
-.event h3 {
-  color: #2c3e50;
-  margin-bottom: 0.5rem;
+.event::before {
+  content: '';
+  position: absolute;
+  left: -2rem;
+  top: 0.5rem;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #42b983;
+}
+
+.month {
+  font-weight: bold;
+  color: #42b983;
+  margin-right: 1rem;
+  min-width: 40px;
 }
 
 .event p {
-  color: #666;
+  color: #4a4a4a;
   margin: 0;
+  line-height: 1.6;
 }
 </style> 

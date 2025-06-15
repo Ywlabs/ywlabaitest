@@ -1,11 +1,11 @@
 <template>
-  <div class="aiems">
-    <h2>AI 기반 에너지 관리</h2>
+  <div class="aigenius">
+    <h2>AI 기반 기업 지능화</h2>
     
-    <div class="aiems-content">
+    <div class="aigenius-content">
       <section class="overview-section">
         <h3>솔루션 개요</h3>
-        <p>AIEMS(AI Energy Management System)는 영우랩스의 특화된 AI 기술을 활용한 스마트 에너지 관리 솔루션입니다. 실시간 에너지 모니터링, 탄소중립 관리, 생성형 AI 기반 최적화로 기업의 에너지 효율을 극대화합니다.</p>
+        <p>AIGENIUS(AI Generative Enterprise Intelligence & Understanding System)는 영우랩스의 최신 생성형 AI 기술을 활용한 기업 지능화 솔루션입니다. 기업의 모든 데이터를 생성형 AI로 분석하고 이해하여 최적의 의사결정을 지원합니다.</p>
       </section>
 
       <section class="features-section">
@@ -13,37 +13,37 @@
         <div class="features-grid">
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-chart-line"></i>
+              <i class="fas fa-brain"></i>
             </div>
-            <h4>에너지 통합 대시보드</h4>
+            <h4>지능형 데이터 분석</h4>
             <ul>
-              <li>실시간 에너지 사용량 모니터링</li>
-              <li>다양한 에너지원 통합 관리</li>
-              <li>직관적인 데이터 시각화</li>
+              <li>생성형 AI 기반 데이터 이해</li>
+              <li>맥락 기반 패턴 분석</li>
+              <li>실시간 인사이트 도출</li>
             </ul>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-leaf"></i>
+              <i class="fas fa-comments"></i>
             </div>
-            <h4>탄소중립 대시보드</h4>
+            <h4>AI 비서</h4>
             <ul>
-              <li>탄소배출량 실시간 추적</li>
-              <li>탄소중립 목표 달성 관리</li>
-              <li>ESG 지표 통합 분석</li>
+              <li>맥락 이해 기반 대화</li>
+              <li>업무 자동화 지원</li>
+              <li>맞춤형 보고서 생성</li>
             </ul>
           </div>
 
           <div class="feature-card">
             <div class="feature-icon">
-              <i class="fas fa-robot"></i>
+              <i class="fas fa-chart-network"></i>
             </div>
-            <h4>생성형 AI 최적화</h4>
+            <h4>지식 그래프</h4>
             <ul>
-              <li>AI 기반 에너지 사용 최적화</li>
-              <li>맞춤형 절감 방안 제안</li>
-              <li>예측적 유지보수 관리</li>
+              <li>기업 지식 자동 구축</li>
+              <li>연관성 기반 추론</li>
+              <li>의사결정 지원</li>
             </ul>
           </div>
         </div>
@@ -53,16 +53,16 @@
         <h3>기대 효과</h3>
         <div class="benefits-grid">
           <div class="benefit-item">
-            <div class="benefit-number">40%</div>
-            <p>에너지 비용 절감</p>
+            <div class="benefit-number">50%</div>
+            <p>의사결정 시간 단축</p>
           </div>
           <div class="benefit-item">
-            <div class="benefit-number">35%</div>
-            <p>탄소배출량 감소</p>
+            <div class="benefit-number">45%</div>
+            <p>업무 효율성 향상</p>
           </div>
           <div class="benefit-item">
-            <div class="benefit-number">98%</div>
-            <p>예측 정확도</p>
+            <div class="benefit-number">99%</div>
+            <p>맥락 이해 정확도</p>
           </div>
         </div>
       </section>
@@ -73,24 +73,24 @@
           <div class="case-item">
             <div class="case-date">2024.03</div>
             <div class="case-content">
-              <h4>제조업체 A사</h4>
-              <p>탄소중립 목표 2년 조기 달성</p>
+              <h4>금융기관 A사</h4>
+              <p>고객 상담 처리 시간 60% 단축</p>
             </div>
           </div>
 
           <div class="case-item">
             <div class="case-date">2024.02</div>
             <div class="case-content">
-              <h4>상업시설 B사</h4>
-              <p>에너지 비용 45% 절감 달성</p>
+              <h4>제조업체 B사</h4>
+              <p>생산 계획 최적화로 수익 35% 증가</p>
             </div>
           </div>
 
           <div class="case-item">
             <div class="case-date">2024.01</div>
             <div class="case-content">
-              <h4>공공기관 C사</h4>
-              <p>ESG 평가 등급 2단계 상승</p>
+              <h4>연구기관 C사</h4>
+              <p>연구 데이터 분석 시간 70% 감소</p>
             </div>
           </div>
         </div>
@@ -101,22 +101,22 @@
 
 <script>
 export default {
-  name: 'AIEMS'
+  name: 'AIGENIUS'
 }
 </script>
 
 <style scoped>
-.aiems {
+.aigenius {
   padding: 2rem;
 }
 
-.aiems h2 {
+.aigenius h2 {
   color: #2c3e50;
   margin-bottom: 2rem;
   font-size: 1.8rem;
 }
 
-.aiems-content {
+.aigenius-content {
   display: flex;
   flex-direction: column;
   gap: 3rem;
