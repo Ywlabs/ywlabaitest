@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, Response
 from common.logger import setup_logger
 from services.environment_service import EnvironmentService
+from common.response import ApiResponse
 import json
 import logging
 
@@ -25,32 +26,25 @@ def get_current_environment():
         logger.info(f"[API] get_latest_environment() 결과: {env}")
         
         # 응답 데이터 구성
-        response_data = {
-            'status': 'success',
-            'data': {
-                'weather': {
-                    'temp': env['temp'],
-                    'main': env['main'],
-                    'description': env['weather_desc']
-                },
-                'air_quality': {
-                    'pm10': env['pm10'],
-                    'pm25': env['pm25'],
-                    'khai_grade': env['khai_grade']
-                },
-                'timestamp': env['timestamp']
-            }
+        data = {
+            'weather': {
+                'temp': env['temp'],
+                'main': env['main'],
+                'description': env['weather_desc']
+            },
+            'air_quality': {
+                'pm10': env['pm10'],
+                'pm25': env['pm25'],
+                'khai_grade': env['khai_grade']
+            },
+            'timestamp': env['timestamp']
         }
-        logger.info(f"[API] 응답 데이터 구성 완료: {response_data}")
-        return jsonify(response_data)
+        logger.info(f"[API] 응답 데이터 구성 완료: {data}")
+        return ApiResponse.success(data=data, message="환경 정보 조회 성공")
         
     except Exception as e:
-        logger.error(f"[API] 환경 정보 조회 중 예외 발생: {str(e)}", exc_info=True)
-        return jsonify({
-            'status': 'error',
-            'message': '환경 정보 조회 실패',
-            'error': str(e)
-        }), 500
+        logger.error(f"환경 정보 조회 중 예외 발생: {str(e)}", exc_info=True)
+        return ApiResponse.error("ERR_SERVER", "환경 정보 조회 실패", reason=str(e), status=500)
 
 @legacy_bp.route('/api/environment/stream', methods=['GET'])
 def stream_environment():
@@ -85,7 +79,7 @@ def stream_environment():
                     yield "data: {\"type\": \"ping\"}\n\n"
                     yield "data: {\"type\": \"ping\"}\n\n"
                 except Exception as e:
-                    logger.error(f"[API] SSE 데이터 전송 중 오류 발생: {str(e)}")
+                    logger.error(f"SSE 데이터 전송 중 오류 발생: {str(e)}")
                     error_data = {
                         'status': 'error',
                         'message': '데이터 전송 중 오류가 발생했습니다.'
@@ -94,7 +88,7 @@ def stream_environment():
                     break
 
         except Exception as e:
-            logger.error(f"[API] SSE 스트림 생성 중 오류 발생: {str(e)}")
+            logger.error(f"SSE 스트림 생성 중 오류 발생: {str(e)}")
             error_data = {
                 'status': 'error',
                 'message': '스트림 연결 중 오류가 발생했습니다.'
@@ -103,7 +97,7 @@ def stream_environment():
         finally:
             # 클라이언트 연결 종료 시 제거
             environment_service.remove_sse_client(generate)
-            logger.info("[API] SSE 클라이언트 연결 종료")
+            logger.error(f"SSE 클라이언트 연결 종료")
 
     return Response(
         generate(),

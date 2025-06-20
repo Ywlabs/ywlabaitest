@@ -38,17 +38,13 @@
       <div class="dashboard-body">
         <div class="widget-search-panel" v-show="hasSearched">
           <div class="search-results-container">
-            <div v-if="isLoading" class="search-loading">
-              <div class="ai-loading-text">AI가 열심히 찾고 있어요</div>
-              <div class="ai-loading-dots">
-                <span class="dot"></span>
-                <span class="dot"></span>
-                <span class="dot"></span>
+            <CommonLoading v-if="isLoading" message="AI가 열심히 찾고 있어요" />
+            <CommonError v-else-if="searchError" :message="searchError" @retry="handleSearch" />
+            <template v-else>
+              <div v-for="(result, idx) in searchResults" :key="idx" class="search-result-item" :class="{selected: isWidgetSelected(result), readonly: isWidgetSelected(result)}" @click="selectWidget(result)">
+                <div class="result-name">{{ result.name }}</div>
               </div>
-            </div>
-            <div v-else v-for="(result, idx) in searchResults" :key="idx" class="search-result-item" :class="{selected: isWidgetSelected(result), readonly: isWidgetSelected(result)}" @click="selectWidget(result)">
-              <div class="result-name">{{ result.name }}</div>
-            </div>
+            </template>
           </div>
         </div>
         <div class="widget-grid">
@@ -87,7 +83,7 @@
         </div>
         <button class="footer-close-btn" @click="$emit('close')" title="닫기">×</button>
       </div>
-      <div v-if="toastMessage" class="toast-message">{{ toastMessage }}</div>
+      <CommonToast v-if="toastMessage" :message="toastMessage" type="error" @hidden="toastMessage = ''" />
     </div>
   </div>
 </template>
@@ -104,6 +100,9 @@ import EnergyAlertWidget from './energy/EnergyAlertWidget.vue'
 import EnergyCostWidget from './energy/EnergyCostWidget.vue'
 import EnergyTipWidget from './energy/EnergyTipWidget.vue'
 import RenewableRatioWidget from './energy/RenewableRatioWidget.vue'
+import CommonLoading from '@/components/CommonLoading.vue'
+import CommonError from '@/components/CommonError.vue'
+import CommonToast from '@/components/CommonToast.vue'
 
 export default {
   name: 'DashboardWidgetGrid',
@@ -117,7 +116,10 @@ export default {
     EnergyAlertWidget,
     EnergyCostWidget,
     EnergyTipWidget,
-    RenewableRatioWidget
+    RenewableRatioWidget,
+    CommonLoading,
+    CommonError,
+    CommonToast
   },
   data() {
     return {
@@ -128,7 +130,8 @@ export default {
       toastMessage: '',
       hasSearched: false,
       recentSearches: [],
-      widgetComponents: {}
+      widgetComponents: {},
+      searchError: ''
     }
   },
   created() {
@@ -165,39 +168,39 @@ export default {
         this.showToast('검색어를 입력해주세요');
         return;
       }
-
       this.isLoading = true;
       this.hasSearched = true;
+      this.searchError = '';
       try {
         const res = await api.post('/api/widgets/search', { query: this.searchQuery });
-        this.searchResults = res.data.data;
-        this.saveRecentSearch(this.searchQuery.trim())
+        if (res.data && res.data.success) {
+          this.searchResults = res.data.data;
+          this.saveRecentSearch(this.searchQuery.trim())
+        } else {
+          this.searchResults = [];
+          this.searchError = res.data.message || '위젯 검색에 실패했습니다.';
+        }
       } catch (e) {
         this.searchResults = [];
-        this.showToast('검색 중 오류가 발생했습니다');
+        this.searchError = '검색 중 네트워크 오류가 발생했습니다.';
       } finally {
         this.isLoading = false;
       }
     },
     showToast(msg) {
       this.toastMessage = msg;
-      setTimeout(() => {
-        this.toastMessage = '';
-      }, 1800);
     },
     async loadWidgetComponent(componentName) {
       if (!componentName) {
-        console.error('Component name is undefined')
+        this.showToast('컴포넌트 이름이 지정되지 않았습니다.');
         return null
       }
-
       if (!this.widgetComponents[componentName]) {
         try {
           const module = await import('/src/widgets/energy/' + componentName + '.vue')
           this.widgetComponents[componentName] = module.default
         } catch (error) {
-          console.error(`Failed to load widget component: ${componentName}`, error)
-          this.showToast('위젯 로드 중 오류가 발생했습니다')
+          this.showToast('위젯 로드 중 오류가 발생했습니다');
           return null
         }
       }

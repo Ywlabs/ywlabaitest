@@ -7,8 +7,8 @@
       <button class="close-btn" @click="$emit('close')">X</button>
     </div>
     <div class="sales-widget-title">영우랩스의 {{ selectedYear }}년 매출정보입니다.</div>
-    <div v-if="loading" class="sales-widget-loading">불러오는 중...</div>
-    <div v-else-if="error" class="sales-widget-error">{{ error }}</div>
+    <CommonLoading v-if="loading" message="매출 정보를 불러오는 중..." />
+    <CommonError v-else-if="error" :message="error" @retry="fetchSales" />
     <div v-else class="sales-widget-content">
       <div class="sales-row">
         <span>달성매출 :</span>
@@ -37,9 +37,12 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue';
 import api from '@/common/axios';
+import CommonLoading from '@/components/CommonLoading.vue';
+import CommonError from '@/components/CommonError.vue';
 
 export default defineComponent({
   name: 'SalesWidget',
+  components: { CommonLoading, CommonError },
   props: {
     year: {
       type: Number,
@@ -74,13 +77,13 @@ export default defineComponent({
       error.value = '';
       try {
         const res = await api.get(`/api/sales/${selectedYear.value}`);
-        if (res.data.status === 'success') {
+        if (res.data && res.data.success) {
           salesData.value = res.data.data;
         } else {
-          error.value = res.data.message || '데이터를 불러올 수 없습니다.';
+          error.value = res.data.message || '매출 데이터를 불러올 수 없습니다.';
         }
       } catch (e: any) {
-        error.value = e.message || '서버 오류가 발생했습니다.';
+        error.value = '매출 조회 중 네트워크 오류가 발생했습니다.';
       } finally {
         loading.value = false;
       }
@@ -90,10 +93,12 @@ export default defineComponent({
     const fetchAIPredict = async () => {
       try {
         const res = await api.get(`/api/sales/${thisYear}`);
-        if (res.data.status === 'success') {
+        if (res.data && res.data.success) {
           aiPredictData.value = res.data.data.ai_predict;
         }
-      } catch {}
+      } catch (e) {
+        console.error("AI 예측 매출 로딩 실패", e)
+      }
     };
 
     onMounted(() => {

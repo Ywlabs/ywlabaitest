@@ -4,8 +4,8 @@
       <h3>영우랩스 조직도</h3>
       <button class="close-btn" @click="$emit('close')" title="닫기">×</button>
     </div>
-    <div v-if="loading" class="loading">불러오는 중...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <CommonLoading v-if="loading" message="직원 정보를 불러오는 중..." />
+    <CommonError v-else-if="error" :message="error" @retry="fetchEmployees" />
     <ul v-else class="employee-list">
       <li v-for="emp in employees" :key="emp.id" class="employee-item">
         <div class="emp-row">
@@ -25,9 +25,12 @@
 
 <script>
 import api from '@/common/axios'
+import CommonLoading from '@/components/CommonLoading.vue'
+import CommonError from '@/components/CommonError.vue'
 
 export default {
   name: 'OrganizationWidget',
+  components: { CommonLoading, CommonError },
   data() {
     return {
       employees: [],
@@ -35,18 +38,25 @@ export default {
       error: null
     }
   },
-  async mounted() {
-    try {
-      const res = await api.get('/api/employee/list')
-      if (res.data.status === 'success' && Array.isArray(res.data.data)) {
-        this.employees = res.data.data
-      } else {
-        this.error = '직원 데이터가 올바르지 않습니다.'
+  mounted() {
+    this.fetchEmployees();
+  },
+  methods: {
+    async fetchEmployees() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const res = await api.get('/api/employee/list')
+        if (res.data && res.data.success && Array.isArray(res.data.data)) {
+          this.employees = res.data.data
+        } else {
+          this.error = res.data.message || '직원 데이터를 불러오는데 실패했습니다.'
+        }
+      } catch (e) {
+        this.error = '네트워크 오류가 발생했습니다.'
+      } finally {
+        this.loading = false
       }
-    } catch (e) {
-      this.error = e.message
-    } finally {
-      this.loading = false
     }
   }
 }
@@ -111,14 +121,6 @@ export default {
 .emp-dept {
   font-size: 0.95em;
   color: #555;
-}
-.loading {
-  color: #007bff;
-  margin: 20px 0;
-}
-.error {
-  color: #d32f2f;
-  margin: 20px 0;
 }
 .emp-contact {
   font-size: 0.85em;

@@ -114,7 +114,6 @@ export default {
       activeWidgetCode: null,
       activeWidgetComponent: null,
       activeWidgetKey: 0,
-      routeList: [], // routes 정보를 저장
       activeWidgetProps: {},
       dashboardOverlayStyle: {},
       showDashboardOverlay: false,
@@ -126,7 +125,6 @@ export default {
     }
   },
   async created() {
-    await this.loadRoutes() // 앱 로딩 시 routes 정보 먼저 가져옴
     this.fetchPopularQuestions()
   },
   mounted() {
@@ -147,24 +145,17 @@ export default {
     clearInterval(this.cursorInterval);
   },
   methods: {
-    async loadRoutes() {
-      try {
-        const res = await api.get('/api/routes')
-        if (res.data && res.data.status === 'success') {
-          this.routeList = res.data.data
-        }
-      } catch (e) {
-        this.routeList = []
-      }
-    },
-    getRouteInfo(route_code) {
-      return this.routeList.find(r => r.route_code === route_code)
-    },
     async fetchPopularQuestions() {
       try {
-        const { data } = await api.get('/api/chat/popular')
-        this.popularQuestions = data
+        const res = await api.get('/api/chat/popular')
+        if (res.data && res.data.success) {
+          this.popularQuestions = res.data.data
+        } else {
+          console.error("인기 질문 로딩 실패:", res.data.message);
+          this.popularQuestions = [];
+        }
       } catch (e) {
+        console.error("인기 질문 로딩 중 네트워크 오류:", e);
         this.popularQuestions = []
       }
     },

@@ -9,7 +9,6 @@ from routes.employee_routes import employee_bp
 from routes.sales_routes import sales_bp
 from routes.widget_routes import widget_bp
 from routes.legacy_routes import legacy_bp
-from routes.routes import routes_bp
 from common.logger import setup_logger
 from database import init_db
 from services.chroma_service import initialize_collections
@@ -62,12 +61,11 @@ def create_app():
         logger.warning("[ChromaDB] 초기화 실패로 인해 벡터 검색 기능이 제한될 수 있습니다.")
     
     # 블루프린트 등록
-    app.register_blueprint(legacy_bp)  # legacy_bp를 먼저 등록
     app.register_blueprint(chat_bp)
     app.register_blueprint(employee_bp)
     app.register_blueprint(sales_bp)
     app.register_blueprint(widget_bp)
-    app.register_blueprint(routes_bp)
+    app.register_blueprint(legacy_bp)
 
     # 환경 정보 스케줄러 시작
     environment_scheduler = start_scheduler()

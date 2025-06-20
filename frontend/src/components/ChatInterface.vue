@@ -57,25 +57,37 @@
         <span class="dot"></span>
       </span>
     </div>
-    <div v-if="toastMessage" class="toast-message">{{ toastMessage }}</div>
+    <CommonToast v-if="toastMessage" :message="toastMessage" :type="toastType" @hidden="toastMessage = ''" />
+    <CommonLoading v-if="isLoading" message="AI가 답변을 생성 중입니다..." />
+    <CommonError v-if="errorMessage" :message="errorMessage" @retry="retryLastAction" />
   </div>
 </template>
 
 <script>
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import CommonToast from './CommonToast.vue'
+import CommonLoading from './CommonLoading.vue'
+import CommonError from './CommonError.vue'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export default {
   name: 'ChatInterface',
+  components: {
+    CommonToast,
+    CommonLoading,
+    CommonError,
+  },
   emits: ['open-widget'],
   data() {
     return {
       messages: [],
       userInput: '',
       isLoading: false,
-      toastMessage: ''
+      toastMessage: '',
+      toastType: 'info',
+      errorMessage: '',
     }
   },
   mounted() {
@@ -97,54 +109,56 @@ export default {
     },
     async loadChatHistory() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/chat/history`)
-        const res = await response.json()
+        const response = await fetch(`${API_BASE_URL}/api/chat/history`);
+        const res = await response.json();
 
-        if (Array.isArray(res.data)) {
-          const history = [...res.data].reverse();
-          const formattedHistory = history.flatMap(item => {
-            const arr = [];
-            if (item.user_message && item.user_message.trim()) {
-              arr.push({ type: 'user', content: item.user_message });
-            }
-            if (item.ai_response && item.ai_response.trim()) {
-              let responseData = null;
-              try {
-                if (item.response_json && typeof item.response_json === 'string') {
-                  // DB의 response_json은 문자열이므로 객체로 파싱하고,
-                  // 실시간 메시지와 구조를 맞추기 위해 'data' 속성으로 감싸줍니다.
-                  responseData = { data: JSON.parse(item.response_json) };
-                } else if (item.response_json) {
-                  // 이미 객체인 경우에도 동일한 구조로 감싸줍니다.
-                  responseData = { data: item.response_json };
-                }
-              } catch (e) {
-                console.error('채팅 기록의 response_json 파싱 오류:', item.response_json, e);
-              }
-
-              arr.push({
-                type: 'ai',
-                content: item.ai_response,
-                route_code: item.route_code,
-                route_type: item.route_type,
-                route_name: item.route_name,
-                route_path: item.route_path,
-                response_json: responseData
-              });
-            }
-            return arr;
-          });
-          if (formattedHistory.length > 0) {
-            this.messages = formattedHistory;
-          } else {
-            this.messages = [{
-              type: 'ai',
-              content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?'
-            }];
-          }
-          this.scrollToBottom();
+        if (!res.success) {
+          this.showToast(res.message || '채팅 기록을 불러오는데 실패했습니다.', 'error');
+          this.messages = [{ type: 'ai', content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?' }];
+          return;
         }
+
+        const history = [...res.data].reverse();
+        if (history.length === 0) {
+          this.messages = [{ type: 'ai', content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?' }];
+          this.scrollToBottom();
+          return;
+        }
+
+        const formattedHistory = history.flatMap(item => {
+          const arr = [];
+          if (item.user_message && item.user_message.trim()) {
+            arr.push({ type: 'user', content: item.user_message });
+          }
+          if (item.ai_response && item.ai_response.trim()) {
+            let responseData = null;
+            try {
+              if (item.response_json && typeof item.response_json === 'string') {
+                responseData = { data: JSON.parse(item.response_json) };
+              } else if (item.response_json) {
+                responseData = { data: item.response_json };
+              }
+            } catch (e) {
+              console.error('채팅 기록의 response_json 파싱 오류:', item.response_json, e);
+            }
+
+            arr.push({
+              type: 'ai',
+              content: item.ai_response,
+              route_code: item.route_code,
+              route_type: item.route_type,
+              route_name: item.route_name,
+              route_path: item.route_path,
+              response_json: responseData
+            });
+          }
+          return arr;
+        });
+        this.messages = formattedHistory;
+        this.scrollToBottom();
+
       } catch (error) {
+        this.showError('네트워크 오류로 채팅 기록을 불러올 수 없습니다.');
         this.messages = [{
           type: 'ai',
           content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?'
@@ -171,22 +185,28 @@ export default {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: userMessage })
         });
+        
         const res = await response.json();
-        const data = res.data;
-        if (data) {
-          this.messages.push({
-            type: 'ai',
-            content: data.response,
-            route_code: data.route_code,
-            route_type: data.route_type,
-            route_name: data.route_name,
-            route_path: data.route_path,
-            response_json: { data }
-          });
+
+        if (!res.success) {
+          this.showToast(res.message || '요청 처리 중 오류가 발생했습니다.', 'error');
+          return;
         }
+
+        const data = res.data;
+        this.messages.push({
+          type: 'ai',
+          content: data.response,
+          route_code: data.route_code,
+          route_type: data.route_type,
+          route_name: data.route_name,
+          route_path: data.route_path,
+          response_json: { data }
+        });
+
       } catch (error) {
-        let errorMessage = '요청하신 문의 사항에 대한 적절한 답변을 찾지 못하였습니다.';
-        this.messages.push({ type: 'ai', content: errorMessage });
+        this.showError('네트워크 오류로 메시지를 보낼 수 없습니다.');
+        this.messages.push({ type: 'ai', content: '네트워크 오류로 메시지를 보낼 수 없습니다.' });
       } finally {
         this.isLoading = false;
         this.scrollToBottom();
@@ -221,11 +241,16 @@ export default {
         e.preventDefault();
       }
     },
-    showToast(msg) {
-      this.toastMessage = msg;
-      setTimeout(() => {
-        this.toastMessage = '';
-      }, 1800);
+    showToast(msg, type = 'info') {
+      this.toastMessage = msg
+      this.toastType = type
+    },
+    showError(msg) {
+      this.errorMessage = msg
+    },
+    retryLastAction() {
+      // 마지막 동작 재시도 로직 (필요시 구현)
+      this.errorMessage = ''
     }
   },
   watch: {
@@ -464,26 +489,5 @@ export default {
 }
 .ai-message + .user-message {
   margin-top: 40px;
-}
-
-.toast-message {
-  position: fixed;
-  left: 50%;
-  bottom: 120px;
-  transform: translateX(-50%);
-  background: #222;
-  color: #fff;
-  padding: 10px 22px;
-  border-radius: 22px;
-  font-size: 1em;
-  z-index: 9999;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  opacity: 0.95;
-  pointer-events: none;
-  animation: toast-fadein 0.2s;
-}
-@keyframes toast-fadein {
-  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-  to { opacity: 0.95; transform: translateX(-50%) translateY(0); }
 }
 </style> 

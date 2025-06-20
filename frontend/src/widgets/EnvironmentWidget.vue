@@ -8,11 +8,8 @@
         </svg>
       </button>
     </div>
-    <div v-if="loading" class="env-loading">
-      <span class="spinner"></span>
-      정보 불러오는 중...
-    </div>
-    <div v-else-if="error" class="env-error">{{ error }}</div>
+    <CommonLoading v-if="loading" message="환경 정보를 불러오는 중..." />
+    <CommonError v-else-if="error" :message="error" @retry="fetchWeatherAndAir" />
     <div v-else :class="['weather-info', { 'loading-anim': loading }]">
       <div class="weather-main">
         <img :src="weatherIconUrl" :alt="weatherDesc" class="weather-icon" style="width:90px;height:90px;" />
@@ -45,6 +42,8 @@
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '@/common/axios'
+import CommonLoading from '@/components/CommonLoading.vue'
+import CommonError from '@/components/CommonError.vue'
 
 // 날씨 아이콘 매핑 (OpenWeatherMap 기준)
 const weatherIconMap = {
@@ -67,6 +66,7 @@ const weatherIconMap = {
 
 export default {
   name: 'EnvironmentWidget',
+  components: { CommonLoading, CommonError },
   setup() {
     const loading = ref(true)
     const error = ref(null)
@@ -168,14 +168,14 @@ export default {
       loading.value = true
       try {
         const response = await api.get('/api/environment/current')
-        if (response.data.status === 'success') {
+        if (response.data && response.data.success) {
           updateEnvironmentData(response.data.data)
           error.value = null // 성공 시 에러 메시지 제거
         } else {
-          throw new Error(response.data.message || '환경 정보 조회 실패')
+          throw new Error(response.data.message || '환경 정보 조회에 실패했습니다.')
         }
       } catch (e) {
-        error.value = '환경 정보를 불러오지 못했습니다.'
+        error.value = '환경 정보를 불러오는 중 네트워크 오류가 발생했습니다.'
         console.error('환경 정보 조회 오류:', e)
       } finally {
         loading.value = false

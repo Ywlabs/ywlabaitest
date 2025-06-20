@@ -113,7 +113,7 @@ export default {
 .renewable-ratio-widget {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 12px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -124,13 +124,13 @@ export default {
 .widget-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .widget-header h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.08rem;
   color: #333;
 }
 
@@ -138,7 +138,7 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -160,21 +160,21 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 10px;
 }
 
 .energy-sources {
   width: 100%;
-  max-width: 400px;
+  max-width: 300px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .source-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .source-header {
@@ -184,18 +184,18 @@ export default {
 }
 
 .name {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #666;
 }
 
 .ratio {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: #333;
 }
 
 .progress-bar {
-  height: 6px;
+  height: 5px;
   background: #e9ecef;
   border-radius: 3px;
   overflow: hidden;
