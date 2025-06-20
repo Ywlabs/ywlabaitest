@@ -1,5 +1,20 @@
 # 시스템 패턴
 
+## 2024-06 최신 구조/패턴 요약
+
+- **API 표준 응답 패턴:**
+  - 모든 백엔드 API `{ success, code, message, data, error }` 구조로 통일, 프론트엔드 전체 일괄 적용.
+- **공통 컴포넌트 패턴:**
+  - CommonToast, CommonError, CommonLoading 등 공통 UI 컴포넌트 도입 및 전체 적용.
+- **라우트/핸들러/서비스 분리:**
+  - 백엔드 라우트(chat_routes 등), 서비스, 핸들러 계층 분리 및 app.py에서 직접 등록.
+- **위젯 구조:**
+  - 동적 import, 공통 스타일/컴포넌트 적용, UI/UX 일관성 강화.
+- **프론트/백엔드 데이터 흐름:**
+  - 표준화된 API 응답 구조, 데이터 구조 일관성, 공통 컴포넌트 활용.
+- **보안/테스트:**
+  - 환경 변수, XSS 방지(DOMPurify), 캐시/성능 최적화, 테스트 전략 강화.
+
 ## 아키텍처 개요
 - **프론트엔드:** Vue 3, Vite, Pinia, Element Plus 기반 SPA
 - **백엔드:** Flask 기반 API 서버, SQLAlchemy (ORM), LangChain, ChromaDB

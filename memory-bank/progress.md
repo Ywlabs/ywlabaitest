@@ -1,5 +1,25 @@
 # 프로젝트 진행 상황
 
+## 2024-06 최신 주요 작업 내역
+
+- **API 응답 포맷 표준화:**
+  - 모든 백엔드 API에서 `{ success, code, message, data, error }` 구조로 통일.
+  - 프론트엔드 전체에서 이 표준 포맷에 맞게 데이터 파싱 및 에러 처리 로직 일괄 리팩토링.
+- **공통 컴포넌트 도입:**
+  - `CommonToast`, `CommonError`, `CommonLoading` 컴포넌트 신규 개발 및 ChatInterface, 위젯, Home 등 전체 적용.
+  - 기존의 개별 에러/로딩/토스트 UI 완전 제거.
+- **불필요 API 및 코드 정리:**
+  - `/api/routes` API 및 관련 프론트엔드 코드(Home.vue 내 routeList 등) 완전 삭제.
+- **백엔드 라우트 구조 개선:**
+  - routes.py를 폐기하고, chat_routes, employee_routes 등 도메인별로 분리.
+  - app.py에서 각 라우트를 직접 import/register하는 구조로 변경.
+- **위젯 UI/UX 개선:**
+  - 신재생에너지 비율 등 위젯의 높이, 패딩, gap 등 축소로 콤팩트하게 개선.
+  - 전체 위젯/대시보드 스타일 일관성 강화.
+- **IDE/타입스크립트 캐시 이슈 해결:**
+  - .vscode, node_modules/.cache, dist, .vite 등 캐시 폴더 삭제로 타입 경고 해결.
+  - env.d.ts, axios.d.ts 등 타입 선언 파일 점검 및 tsconfig 경로 alias 확인.
+
 ## 완료된 작업
 
 1. 프로젝트 규칙 문서화

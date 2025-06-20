@@ -1,5 +1,19 @@
 # 기술 컨텍스트
 
+## 2024-06 최신 기술 적용 및 참고사항
+
+- **API 표준화:**
+  - 모든 백엔드 API `{ success, code, message, data, error }` 구조로 통일, 프론트엔드 전체 일괄 적용.
+- **공통 컴포넌트:**
+  - CommonToast, CommonError, CommonLoading 등 공통 UI 컴포넌트 도입 및 전체 적용.
+- **타입스크립트/IDE 환경:**
+  - env.d.ts, axios.d.ts 등 타입 선언 파일로 .vue, axios import 타입 경고 해결.
+  - .vscode, node_modules/.cache 등 캐시 삭제로 IDE 타입 경고 해결.
+- **경로 alias:**
+  - @/common, @/components, @/widgets 등 tsconfig.json의 paths 설정 활용.
+- **불필요 API 및 코드 정리:**
+  - /api/routes 등 미사용 API 및 관련 코드 완전 삭제.
+
 ## 기술 스택
 ### 프론트엔드
 - Vue 3
