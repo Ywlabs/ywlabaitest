@@ -27,6 +27,24 @@ def get_current_environment():
         env = environment_service.get_latest_environment()
         logger.info(f"[API] get_latest_environment() 결과: {env}")
         
+        # 환경 정보가 없는 경우 처리
+        if not env:
+            logger.warning("[API] 환경 정보가 없습니다. 기본값으로 응답합니다.")
+            data = {
+                'weather': {
+                    'temp': 0,
+                    'main': 'Unknown',
+                    'description': '데이터 없음'
+                },
+                'air_quality': {
+                    'pm10': '알수없음',
+                    'pm25': '알수없음',
+                    'khai_grade': '-'
+                },
+                'timestamp': None
+            }
+            return ApiResponse.success(data=data, message="환경 정보가 없어 기본값으로 응답합니다.")
+        
         # 응답 데이터 구성
         data = {
             'weather': {
@@ -53,6 +71,10 @@ def get_current_environment():
 def stream_environment():
     """SSE 스트림 연결 (route)"""
     logger.info("[API] SSE 스트림 연결 요청: /environment/stream")
+    
+    # 환경 정보 서비스 인스턴스 생성
+    environment_service = EnvironmentService()
+    
     def generate():
         try:
             # 클라이언트 연결 시 초기 데이터 전송
@@ -110,6 +132,8 @@ def stream_environment():
             'Connection': 'keep-alive',
             'X-Accel-Buffering': 'no',
             'Access-Control-Allow-Origin': '*',  # CORS 허용
-            'Access-Control-Allow-Headers': 'Content-Type'
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',  # Authorization 헤더 허용
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',  # HTTP 메서드 허용
+            'Access-Control-Allow-Credentials': 'true'  # Credentials 허용
         }
     ) 

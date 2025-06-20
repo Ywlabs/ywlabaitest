@@ -78,7 +78,6 @@ export default {
     const pm10 = ref(null)
     const pm25 = ref(null)
     const khai_grade = ref(null)
-    const eventSource = ref(null)
     const lastUpdateTime = ref(null)
     let pollingInterval = null
 
@@ -91,77 +90,88 @@ export default {
     })
 
     const pm10Grade = computed(() => {
-      if (pm10.value === null) return '-'
-      if (pm10.value <= 30) return '좋음'
-      if (pm10.value <= 80) return '보통'
-      if (pm10.value <= 150) return '나쁨'
-      return '매우나쁨'
+      if (pm10.value === null || pm10.value === undefined) return '-'
+      // 문자열 값인 경우 (점검중, 측정불가, 알수없음 등)
+      if (typeof pm10.value === 'string') {
+        if (pm10.value === '점검중' || pm10.value === '측정불가' || pm10.value === '알수없음') return pm10.value
+        // 숫자 문자열인 경우 변환 시도
+        const numValue = Number(pm10.value)
+        if (isNaN(numValue)) return pm10.value // 변환 불가능한 문자열은 그대로 반환
+        pm10.value = numValue // 숫자로 변환 가능하면 숫자로 저장
+      }
+      // 숫자 값인 경우 등급 계산
+      if (typeof pm10.value === 'number') {
+        if (pm10.value <= 30) return '좋음'
+        if (pm10.value <= 80) return '보통'
+        if (pm10.value <= 150) return '나쁨'
+        return '매우나쁨'
+      }
+      return pm10.value // 기타 경우 원값 반환
     })
 
     const pm25Grade = computed(() => {
-      if (pm25.value === null) return '-'
-      if (pm25.value <= 15) return '좋음'
-      if (pm25.value <= 35) return '보통'
-      if (pm25.value <= 75) return '나쁨'
-      return '매우나쁨'
+      if (pm25.value === null || pm25.value === undefined) return '-'
+      // 문자열 값인 경우 (점검중, 측정불가, 알수없음 등)
+      if (typeof pm25.value === 'string') {
+        if (pm25.value === '점검중' || pm25.value === '측정불가' || pm25.value === '알수없음') return pm25.value
+        // 숫자 문자열인 경우 변환 시도
+        const numValue = Number(pm25.value)
+        if (isNaN(numValue)) return pm25.value // 변환 불가능한 문자열은 그대로 반환
+        pm25.value = numValue // 숫자로 변환 가능하면 숫자로 저장
+      }
+      // 숫자 값인 경우 등급 계산
+      if (typeof pm25.value === 'number') {
+        if (pm25.value <= 15) return '좋음'
+        if (pm25.value <= 35) return '보통'
+        if (pm25.value <= 75) return '나쁨'
+        return '매우나쁨'
+      }
+      return pm25.value // 기타 경우 원값 반환
     })
 
     const aqiClass = (val) => {
-      if (val === null) return 'aqi-good'
+      if (val === null || val === undefined) return 'aqi-good'
+      // 문자열 값인 경우 (점검중, 측정불가, 알수없음 등)
+      if (typeof val === 'string') {
+        if (val === '점검중' || val === '측정불가' || val === '알수없음') return 'aqi-unknown'
+        // 숫자 문자열인 경우 변환 시도
+        const numValue = Number(val)
+        if (isNaN(numValue)) return 'aqi-unknown' // 변환 불가능한 문자열
+        val = numValue // 숫자로 변환 가능하면 숫자로 사용
+      }
+      // 숫자 값인 경우 등급 계산
       if (typeof val === 'number') {
         if (val <= 30 || val <= 15 || val <= 0.030) return 'aqi-good'
         if (val <= 80 || val <= 35 || val <= 0.090) return 'aqi-moderate'
         if (val <= 150 || val <= 75 || val <= 0.150) return 'aqi-bad'
         return 'aqi-verybad'
       }
-      return 'aqi-good'
+      return 'aqi-unknown' // 기타 경우
     }
 
     const setupSSE = () => {
-      // 기존 EventSource가 있다면 닫기
-      if (eventSource.value) {
-        eventSource.value.close()
+      // JWT 토큰 가져오기
+      const token = localStorage.getItem('jwt_token')
+      if (!token) {
+        console.error('JWT 토큰이 없어 실시간 업데이트를 할 수 없습니다.')
+        error.value = '인증 토큰이 없어 실시간 업데이트를 할 수 없습니다.'
+        startPolling() // 폴링으로 폴백
+        return
       }
 
-      // 새로운 EventSource 연결
-      eventSource.value = new EventSource('http://localhost:5000/api/environment/stream')
-
-      // SSE 이벤트 리스너 설정
-      eventSource.value.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.type === 'ping') {
-            return // ping 메시지는 무시
-          }
-          if (data.status === 'success') {
-            updateEnvironmentData(data.data)
-            error.value = null // 성공 시 에러 메시지 제거
-          } else if (data.status === 'error') {
-            error.value = data.message
-          }
-        } catch (e) {
-          console.error('SSE 데이터 파싱 오류:', e)
-          error.value = '데이터 처리 중 오류가 발생했습니다.'
-        }
-      }
-
-      eventSource.value.onerror = (error) => {
-        console.error('SSE 연결 오류:', error)
-        error.value = '실시간 업데이트 연결이 끊어졌습니다.'
-        // SSE 연결 실패 시 폴링으로 폴백
-        eventSource.value.close()
-        startPolling()
-      }
+      // SSE 대신 폴링 방식 사용 (더 안정적)
+      console.log('폴링 방식으로 실시간 업데이트 시작')
+      startPolling()
     }
 
     const startPolling = () => {
-      // 1분마다 폴링
+      // 30초마다 폴링 (더 실시간에 가깝게)
       if (pollingInterval) {
         clearInterval(pollingInterval)
       }
       pollingInterval = setInterval(() => {
         fetchWeatherAndAir()
-      }, 60 * 1000)
+      }, 30 * 1000)
     }
 
     const fetchWeatherAndAir = async () => {
@@ -206,13 +216,14 @@ export default {
         // 대기질 정보 업데이트
         try {
           const airQualityData = data.air_quality || {}
-          pm10.value = airQualityData.pm10 ? Number(airQualityData.pm10) : 0
-          pm25.value = airQualityData.pm25 ? Number(airQualityData.pm25) : 0
+          // pm10과 pm25는 문자열 그대로 표시 (점검중, 측정불가 등 포함)
+          pm10.value = airQualityData.pm10 || '측정불가'
+          pm25.value = airQualityData.pm25 || '측정불가'
           khai_grade.value = airQualityData.khai_grade || ''
         } catch (e) {
           console.error('대기질 정보 업데이트 실패:', e)
-          pm10.value = 0
-          pm25.value = 0
+          pm10.value = '측정불가'
+          pm25.value = '측정불가'
           khai_grade.value = ''
         }
         
@@ -266,9 +277,6 @@ export default {
 
     onUnmounted(() => {
       // 컴포넌트 언마운트 시 정리
-      if (eventSource.value) {
-        eventSource.value.close()
-      }
       if (pollingInterval) {
         clearInterval(pollingInterval)
       }
@@ -404,6 +412,9 @@ export default {
 }
 .aqi-verybad {
   color: #b71c1c;
+}
+.aqi-unknown {
+  color: #666; /* 점검중, 측정불가 등의 색상 */
 }
 .weather-info {
   transition: opacity 0.4s, filter 0.4s;

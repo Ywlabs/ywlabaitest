@@ -42,13 +42,38 @@
 
       <!-- Right Column (30%) -->
       <div class="right-column">
-        <div class="popular-questions">
-          <h4>많이 검색된 질문</h4>
-          <ul>
-            <li v-for="(q, idx) in popularQuestions" :key="idx" @click="setPrompt(q)">
-              {{ q }}
-            </li>
-          </ul>
+        <div class="right-top">
+          <div class="popular-questions">
+            <h4>많이 검색된 질문</h4>
+            <ul>
+              <li v-for="(q, idx) in popularQuestions" 
+                  :key="idx" 
+                  @click="setPrompt(q)"
+                  :title="q">
+                {{ q }}
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="right-bottom">
+          <div class="quick-certificate">
+            <h4>빠른 증명서 발급</h4>
+            <div class="certificate-buttons">
+              <button class="cert-btn" @click="requestCertificate('재직증명서')">
+                재직증명서
+              </button>
+              <button class="cert-btn" @click="requestCertificate('경력증명서')">
+                경력증명서
+              </button>
+              <button class="cert-btn" @click="requestCertificate('당월급여명세서')">
+                당월급여명세서
+              </button>
+              <button class="cert-btn" @click="requestCertificate('원천징수영수증')">
+                원천징수영수증
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -72,6 +97,13 @@
         />
       </div>
     </div>
+    
+    <!-- 토스트 메시지 -->
+    <CommonToast 
+      :message="toastMessage" 
+      :type="toastType" 
+      @hidden="toastMessage = ''"
+    />
   </div>
 </template>
 
@@ -81,9 +113,11 @@ import EnvironmentWidget from '@/widgets/EnvironmentWidget.vue'
 import SalesWidget from '@/widgets/SalesWidget.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
 import api from '@/common/axios'
-import { markRaw, defineAsyncComponent } from 'vue'
+import { markRaw, defineAsyncComponent, computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { useAuthStore } from '@/store/auth'
+import CommonToast from '@/components/CommonToast.vue'
 
 const ENERGY_WIDGET = defineAsyncComponent(() => import('@/widgets/DashboardWidgetGrid.vue'))
 
@@ -100,7 +134,8 @@ export default {
     AnimationBackground,
     EnvironmentWidget,
     SalesWidget,
-    ChatInterface
+    ChatInterface,
+    CommonToast
   },
   data() {
     return {
@@ -122,6 +157,8 @@ export default {
       isDragging: false,
       dragStart: { x: 0, y: 0 },
       overlayPos: null, // 드래그 시 top/left
+      toastMessage: '',
+      toastType: 'info',
     }
   },
   async created() {
@@ -164,6 +201,27 @@ export default {
         this.$refs.chatRef.setUserInput(q);
       }
     },
+    requestCertificate(certType) {
+      const authStore = useAuthStore()
+      const user = authStore.user
+      
+      // 직원정보가 연결되지 않은 경우
+      if (!user || user.role !== 'user' || user.employee_id === null) {
+        this.showToastMessage('증명서 발급은 직원만 가능합니다.', 'warning')
+        return
+      }
+      
+      const message = `${certType} 발급을 요청합니다.`;
+      if (this.$refs.chatRef && this.$refs.chatRef.setUserInput) {
+        this.$refs.chatRef.setUserInput(message);
+      }
+    },
+    
+    showToastMessage(message, type = 'info') {
+      this.toastMessage = message
+      this.toastType = type
+    },
+    
     async handleOpenWidget({ route_code, widgetProps }) {
       const code = route_code ? route_code.toUpperCase() : '';
       console.log('route_code:', route_code, 'code:', code); // 디버깅용
@@ -305,6 +363,13 @@ export default {
     isLoading() {
       this.scrollToBottom();
     }
+  },
+  computed: {
+    isUserWithEmployee() {
+      const authStore = useAuthStore()
+      const user = authStore.user
+      return user && user.role === 'user' && user.employee_id !== null
+    }
   }
 }
 </script>
@@ -318,7 +383,7 @@ export default {
   font-size: 0.9em;
   position: relative; /* 배경 위에 오도록 */
   z-index: 1;
-  overflow: hidden; /* 배경이 영역을 벗어나지 않게 */
+  overflow: visible; /* 스크롤바 허용 */
 }
 
 .layout-container {
@@ -382,6 +447,17 @@ export default {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   height: 80%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-top {
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.right-bottom {
+  flex: 1;
 }
 
 .user-message {
@@ -572,6 +648,12 @@ export default {
   cursor: pointer;
   transition: all 0.2s;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-height: 1.4em; /* line-height * 1 */
 }
 
 .popular-questions li:hover {
@@ -726,5 +808,43 @@ export default {
 }
 .fade-widget-enter-to, .fade-widget-leave-from {
   opacity: 1;
+}
+
+.quick-certificate {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.quick-certificate h4 {
+  margin-bottom: 1rem;
+  color: #007bff;
+  font-size: 1.1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #007bff;
+}
+
+.certificate-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cert-btn {
+  padding: 0.8rem 1rem;
+  background: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  line-height: 1.4;
+  text-align: left;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.cert-btn:hover {
+  background: #e6f7ff;
+  transform: translateX(5px);
 }
 </style> 

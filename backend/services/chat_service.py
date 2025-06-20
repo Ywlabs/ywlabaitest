@@ -186,6 +186,9 @@ def save_chat_interaction(user_message, ai_response, intent_tag, route_code, res
         conn.close()
 
 def get_chat_history():
+    """챗봇 히스토리를 조회합니다."""
+    logger.info("[CHAT] 챗봇 히스토리 조회 시작")
+    
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -222,7 +225,12 @@ def get_chat_history():
                     'created_at': row['created_at'].isoformat() if row['created_at'] else None,
                     'response_json': row['response_json']
                 })
+            logger.info(f"[CHAT] 챗봇 히스토리 조회 완료: {len(history)}개 항목")
             return history
+    except Exception as e:
+        logger.error(f"[CHAT] 챗봇 히스토리 조회 중 오류 발생: {str(e)}")
+        # 오류 발생 시 빈 리스트 반환
+        return []
     finally:
         conn.close()
 

@@ -45,7 +45,12 @@
 
         <!-- 로그인/사용자 정보 -->
         <div v-if="isAuthenticated" class="nav-item user-info">
-          <span class="user-name">{{ userName }} 님</span>
+          <div class="user-details">
+            <span class="user-email">{{ userEmail }}</span>
+            <span v-if="hasEmployeeId" class="user-name">{{ displayName }}</span>
+            <span v-if="userRole === 'user' && !hasEmployeeId" class="mapping-notice">직원정보 매핑필요</span>
+            <span v-if="userRole === 'admin'" class="admin-notice">({{ userName }})</span>
+          </div>
           <button class="logout-btn" @click="handleLogout">로그아웃</button>
         </div>
         <div v-else class="nav-item">
@@ -53,29 +58,104 @@
         </div>
       </div>
     </nav>
+    
+    <!-- 토스트 메시지 -->
+    <CommonToast 
+      :message="toastMessage" 
+      :type="toastType" 
+      :show="showToast"
+      @close="showToast = false"
+    />
   </header>
 </template>
 
 <script>
 import { useAuthStore } from '@/store/auth'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import CommonToast from './CommonToast.vue'
 
 export default {
   name: 'Header',
+  components: {
+    CommonToast
+  },
   setup() {
     const authStore = useAuthStore()
     const router = useRouter()
+    
+    // 토스트 상태
+    const toastMessage = ref('')
+    const toastType = ref('info')
+    const showToast = ref(false)
+    
     // 인증 여부, 사용자명, 역할
     const isAuthenticated = computed(() => authStore.isAuthenticated)
-    const userName = computed(() => authStore.user?.name || authStore.user?.email || '')
     const userRole = computed(() => authStore.user?.role || '')
+    const hasEmployeeId = computed(() => authStore.user?.employee_id !== null)
+    
+    // 표시할 이름 (직원명/직책 또는 이메일)
+    const displayName = computed(() => {
+      const user = authStore.user
+      console.log('Header - User info:', user) // 디버깅용
+      
+      if (user?.employee_name) {
+        // 직원명과 직책이 모두 있으면 "직원명 / 직책" 형태로 표시
+        if (user.employee_position) {
+          return `${user.employee_name} / ${user.employee_position}`
+        }
+        return user.employee_name // 직책이 없으면 직원명만
+      }
+      return user?.email || user?.name || '' // 직원 정보가 없으면 이메일 또는 이름
+    })
+    
+    // 사용자 이메일
+    const userEmail = computed(() => {
+      const user = authStore.user
+      return user?.email || ''
+    })
+    
+    // 사용자 이름
+    const userName = computed(() => {
+      const user = authStore.user
+      return user?.name || user?.email?.split('@')[0] || ''
+    })
+    
+    // 토스트 표시 함수
+    const showToastMessage = (message, type = 'info') => {
+      toastMessage.value = message
+      toastType.value = type
+      showToast.value = true
+      
+      // 3초 후 자동으로 토스트 숨기기
+      setTimeout(() => {
+        showToast.value = false
+      }, 3000)
+    }
+    
     // 로그아웃 함수
     const handleLogout = () => {
       authStore.logout()
-      router.push('/login')
+      showToastMessage('로그아웃이 완료되었습니다.', 'success')
+      
+      // 토스트 메시지 표시 후 로그인 페이지로 이동
+      setTimeout(() => {
+        router.push('/login')
+      }, 1000)
     }
-    return { isAuthenticated, userName, userRole, handleLogout }
+    
+    return { 
+      isAuthenticated, 
+      displayName, 
+      userRole, 
+      handleLogout,
+      toastMessage,
+      toastType,
+      showToast,
+      hasEmployeeId,
+      userEmail,
+      userName
+    }
   }
 }
 </script>
@@ -94,7 +174,7 @@ export default {
 .nav {
   width: 100%;
   box-sizing: border-box;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem 0 1rem 30px;
   display: flex;
@@ -177,11 +257,42 @@ export default {
   align-items: center;
   gap: 0.7rem;
 }
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
 .user-name {
   color: #2355d6;
   font-weight: 600;
-  font-size: 1em;
+  font-size: 0.85em;
 }
+
+.user-email {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.85em;
+}
+
+.mapping-notice {
+  color: #dc3545;
+  font-size: 0.75em;
+  font-weight: 500;
+  line-height: 1;
+  text-align: right;
+}
+
+.admin-notice {
+  color: #2355d6;
+  font-size: 0.75em;
+  font-weight: 500;
+  line-height: 1;
+  text-align: right;
+}
+
 .logout-btn {
   background: #f4f8fb;
   color: #2355d6;
