@@ -21,7 +21,7 @@ def start_scheduler():
     scheduler.add_job(
         update_environment_job,
         'interval',
-        minutes=10,
+        minutes=100,
         id='update_environment',
         replace_existing=True
     )

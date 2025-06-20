@@ -1208,3 +1208,40 @@ CREATE TABLE IF NOT EXISTS environment_data (
 
 -- 환경 정보 인덱스
 CREATE INDEX IF NOT EXISTS idx_environment_created_at ON environment_data(created_at);
+
+
+
+
+-- 2024-06-22: 인증/인가 및 사용자별 기능 확장용 테이블 추가
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '시스템 사용자 고유번호',
+    email VARCHAR(128) NOT NULL UNIQUE COMMENT '로그인 이메일(ID)',
+    password_hash VARCHAR(256) NOT NULL COMMENT '암호화된 비밀번호',
+    name VARCHAR(64) NOT NULL COMMENT '사용자 이름',
+    role ENUM('admin', 'user') DEFAULT 'user' COMMENT '권한(관리자/일반)',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '계정 활성화 여부',
+    employee_id INT COMMENT 'employees 테이블 id(사번 등)와 논리적 연관',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '계정 생성일'
+) COMMENT='시스템 로그인/권한 관리용 사용자 테이블';
+
+CREATE TABLE IF NOT EXISTS login_history (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '로그인 이력 고유번호',
+    user_id INT NOT NULL COMMENT 'users 테이블 id(사용자 고유번호)',
+    login_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '로그인 시각',
+    success BOOLEAN NOT NULL COMMENT '로그인 성공 여부',
+    ip_address VARCHAR(45) COMMENT '로그인 시도 IP',
+    user_agent VARCHAR(256) COMMENT '브라우저/클라이언트 정보'
+) COMMENT='사용자 로그인 이력 테이블';
+
+ALTER TABLE chat_history
+ADD COLUMN user_id INT COMMENT 'users 테이블 id(사용자 고유번호)' AFTER id;
+
+CREATE TABLE IF NOT EXISTS users_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '토큰 고유번호',
+    user_id INT NOT NULL COMMENT 'users 테이블 id(사용자 고유번호)',
+    token VARCHAR(512) NOT NULL COMMENT 'JWT 토큰 문자열',
+    issued_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '발급 시각',
+    expires_at DATETIME COMMENT '만료 시각',
+    is_revoked BOOLEAN DEFAULT FALSE COMMENT '토큰 폐기 여부'
+) COMMENT='JWT 리프레시/블랙리스트 관리 테이블';

@@ -174,8 +174,8 @@ export default {
       try {
         const res = await api.post('/api/widgets/search', { query: this.searchQuery });
         if (res.data && res.data.success) {
-          this.searchResults = res.data.data;
-          this.saveRecentSearch(this.searchQuery.trim())
+        this.searchResults = res.data.data;
+        this.saveRecentSearch(this.searchQuery.trim())
         } else {
           this.searchResults = [];
           this.searchError = res.data.message || '위젯 검색에 실패했습니다.';

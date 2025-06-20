@@ -45,17 +45,17 @@ export default {
     async fetchEmployees() {
       this.loading = true;
       this.error = null;
-      try {
-        const res = await api.get('/api/employee/list')
+    try {
+      const res = await api.get('/api/employee/list')
         if (res.data && res.data.success && Array.isArray(res.data.data)) {
-          this.employees = res.data.data
-        } else {
+        this.employees = res.data.data
+      } else {
           this.error = res.data.message || '직원 데이터를 불러오는데 실패했습니다.'
-        }
-      } catch (e) {
+      }
+    } catch (e) {
         this.error = '네트워크 오류가 발생했습니다.'
-      } finally {
-        this.loading = false
+    } finally {
+      this.loading = false
       }
     }
   }

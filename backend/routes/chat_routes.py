@@ -6,6 +6,7 @@ import re
 from services.employee_service import extract_employee_name, get_employee_info_and_fill_template
 from flask import current_app
 from common.response import ApiResponse
+from routes import jwt_required  # JWT 인증 데코레이터 import
 
 # 로거 설정
 logger = setup_logger('chat_routes')
@@ -13,6 +14,7 @@ logger = setup_logger('chat_routes')
 chat_bp = Blueprint('chat', __name__)
 
 @chat_bp.route('/api/chat', methods=['POST'], strict_slashes=False)
+@jwt_required  # JWT 인증 필요
 def chat():
     """
     챗봇 메시지 처리
@@ -39,6 +41,7 @@ def chat():
         return ApiResponse.error("ERR_SERVER", "서버 오류가 발생했습니다.", reason=str(e), status=500)
 
 @chat_bp.route('/api/chat/history', methods=['GET'])
+@jwt_required  # JWT 인증 필요
 def chat_history():
     """
     챗봇 히스토리 조회
@@ -53,6 +56,7 @@ def chat_history():
         return ApiResponse.error("ERR_SERVER", "챗봇 히스토리 조회 실패", reason=str(e), status=500)
 
 @chat_bp.route('/api/chat/popular', methods=['GET'])
+@jwt_required  # JWT 인증 필요
 def popular_questions():
     """
     인기 질문 목록 조회

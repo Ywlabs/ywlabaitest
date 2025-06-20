@@ -4,6 +4,7 @@ from services.environment_service import EnvironmentService
 from common.response import ApiResponse
 import json
 import logging
+from routes import jwt_required  # JWT 인증 데코레이터 import
 
 # 로거 설정
 logger = setup_logger('legacy_routes')
@@ -12,6 +13,7 @@ logger = setup_logger('legacy_routes')
 legacy_bp = Blueprint('legacy', __name__)
 
 @legacy_bp.route('/api/environment/current', methods=['GET'])
+@jwt_required  # JWT 인증 필요
 def get_current_environment():
     """현재 환경 정보 조회"""
     try:
@@ -47,6 +49,7 @@ def get_current_environment():
         return ApiResponse.error("ERR_SERVER", "환경 정보 조회 실패", reason=str(e), status=500)
 
 @legacy_bp.route('/api/environment/stream', methods=['GET'])
+@jwt_required  # JWT 인증 필요
 def stream_environment():
     """SSE 스트림 연결 (route)"""
     logger.info("[API] SSE 스트림 연결 요청: /environment/stream")

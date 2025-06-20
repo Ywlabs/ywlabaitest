@@ -2,11 +2,13 @@ from flask import Blueprint
 from services.sales_service import get_sales_summary, predict_sales
 from common.response import ApiResponse
 import logging
+from routes import jwt_required  # JWT 인증 데코레이터 import
 
 sales_bp = Blueprint('sales', __name__)
 
 # 연도별 매출 및 AI 예측 결과를 반환하는 API
 @sales_bp.route('/api/sales/<int:year>', methods=['GET'])
+@jwt_required  # JWT 인증 필요
 def get_sales(year):
     """
     연도별 실제 매출 집계 및 AI 예측 결과 반환
@@ -26,5 +28,11 @@ def get_sales(year):
         }
         return ApiResponse.success(data=data, message="매출 데이터 조회 성공")
     except Exception as e:
+        logging.error(f"매출 데이터 조회 중 오류 발생: {str(e)}")
+        return ApiResponse.error("ERR_SERVER", "매출 데이터 조회 실패", reason=str(e), status=500) 
+        logging.error(f"매출 데이터 조회 중 오류 발생: {str(e)}")
+        return ApiResponse.error("ERR_SERVER", "매출 데이터 조회 실패", reason=str(e), status=500) 
+        logging.error(f"매출 데이터 조회 중 오류 발생: {str(e)}")
+        return ApiResponse.error("ERR_SERVER", "매출 데이터 조회 실패", reason=str(e), status=500) 
         logging.error(f"매출 데이터 조회 중 오류 발생: {str(e)}")
         return ApiResponse.error("ERR_SERVER", "매출 데이터 조회 실패", reason=str(e), status=500) 

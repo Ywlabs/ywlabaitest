@@ -67,6 +67,10 @@ class BaseConfig:
             },
         ]
 
+        # JWT 인증 관련 설정
+        self.JWT_SECRET = os.getenv('JWT_SECRET', 'ywlabs_secret')
+        self.JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', 60))
+
 class DevConfig(BaseConfig):
     """개발 환경 설정"""
     def __init__(self):

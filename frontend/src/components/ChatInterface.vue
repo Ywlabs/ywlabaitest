@@ -118,19 +118,19 @@ export default {
           return;
         }
 
-        const history = [...res.data].reverse();
+          const history = [...res.data].reverse();
         if (history.length === 0) {
           this.messages = [{ type: 'ai', content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?' }];
           this.scrollToBottom();
           return;
         }
 
-        const formattedHistory = history.flatMap(item => {
-          const arr = [];
-          if (item.user_message && item.user_message.trim()) {
-            arr.push({ type: 'user', content: item.user_message });
-          }
-          if (item.ai_response && item.ai_response.trim()) {
+          const formattedHistory = history.flatMap(item => {
+            const arr = [];
+            if (item.user_message && item.user_message.trim()) {
+              arr.push({ type: 'user', content: item.user_message });
+            }
+            if (item.ai_response && item.ai_response.trim()) {
             let responseData = null;
             try {
               if (item.response_json && typeof item.response_json === 'string') {
@@ -142,20 +142,20 @@ export default {
               console.error('채팅 기록의 response_json 파싱 오류:', item.response_json, e);
             }
 
-            arr.push({
-              type: 'ai',
-              content: item.ai_response,
-              route_code: item.route_code,
-              route_type: item.route_type,
-              route_name: item.route_name,
-              route_path: item.route_path,
+              arr.push({
+                type: 'ai',
+                content: item.ai_response,
+                route_code: item.route_code,
+                route_type: item.route_type,
+                route_name: item.route_name,
+                route_path: item.route_path,
               response_json: responseData
-            });
-          }
-          return arr;
-        });
-        this.messages = formattedHistory;
-        this.scrollToBottom();
+              });
+            }
+            return arr;
+          });
+            this.messages = formattedHistory;
+          this.scrollToBottom();
 
       } catch (error) {
         this.showError('네트워크 오류로 채팅 기록을 불러올 수 없습니다.');
@@ -194,15 +194,15 @@ export default {
         }
 
         const data = res.data;
-        this.messages.push({
-          type: 'ai',
-          content: data.response,
-          route_code: data.route_code,
-          route_type: data.route_type,
-          route_name: data.route_name,
-          route_path: data.route_path,
-          response_json: { data }
-        });
+          this.messages.push({
+            type: 'ai',
+            content: data.response,
+            route_code: data.route_code,
+            route_type: data.route_type,
+            route_name: data.route_name,
+            route_path: data.route_path,
+            response_json: { data }
+          });
 
       } catch (error) {
         this.showError('네트워크 오류로 메시지를 보낼 수 없습니다.');

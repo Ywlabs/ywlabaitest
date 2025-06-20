@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 openai_client = OpenAI(
     api_key=os.getenv('OPENAI_API_KEY'),
     timeout=20.0
-)
+    )
 
 def create_response(
     response: str,
@@ -204,7 +204,7 @@ def get_chat_history():
                     ch.response_json
                 FROM chat_history ch
                 LEFT JOIN routes r ON ch.route_code = r.route_code
-                ORDER BY ch.created_at DESC
+                ORDER BY ch.created_at DESC 
             ''')
             rows = cursor.fetchall()
             history = []
