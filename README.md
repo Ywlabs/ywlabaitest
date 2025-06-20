@@ -50,7 +50,8 @@
 - ChromaDB (벡터스토어)
 - OpenAI API
 - SQLAlchemy
-- Redis (캐싱)
+- MySQL (운영 DB)
+- Redis (선택적 캐싱)
 
 ### Frontend
 - **Vue.js 3.0**
@@ -58,11 +59,15 @@
 - Pinia (상태관리)
 - Vite (번들러)
 - Axios
-- TailwindCSS
+- Element Plus (UI)
+- marked (Markdown 파서)
+- dompurify (HTML Sanitizer)
+- Lottie-web (애니메이션)
 
 ### Database
-- SQLite (개발/테스트)
-- Redis (캐싱)
+- MySQL (운영)
+- ChromaDB (벡터스토어)
+- SQLite (개발/테스트, 선택)
 
 ### DevOps
 - Docker
@@ -103,12 +108,16 @@ pip install -r requirements.txt
 `.env` 파일을 생성하고 다음 환경 변수를 설정합니다:
 ```env
 OPENAI_API_KEY=your_api_key
-DATABASE_URL=sqlite:///app.db
-REDIS_URL=redis://localhost:6379
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DB=ywlabs
+MYSQL_PORT=3306
 ```
 
 4. 데이터베이스 초기화
 ```bash
+# 예시: 초기화 스크립트가 있다면 실행
 python backend/init_db.py
 ```
 
@@ -165,9 +174,9 @@ frontend/
 
 - **core/**: 모든 공통 모듈 일원화(핸들러, 임베딩, 유틸, 파서, 컨버터)
   - 서비스 계층에서는 반드시 core 하위 모듈만 import
-  - intent별 후처리/DB조회/템플릿 로직은 core/handlers 하위 핸들러로 분리, intent→handler 매핑은 intent_handler_map.py에서 관리
+  - intent별 후처리/DB조회/템플릿 로직은 core/handlers 하위 핸들러로 분리, intent→handler 매핑은 코드 내에서 관리(예시: INTENT_HANDLER_MAP)
 - **services/**: 실제 비즈니스 로직(핸들러 호출, DB/외부 API 연동 등)
-- **memory-bank/**: 정책/진행상황/컨텍스트/이슈 등 기록, 코드-정책-운영 싱크 유지
+- **memory-bank/**: 정책/진행상황/컨텍스트/이슈 등 기록, 코드-정책-운영 싱크 유지. 문서 기반으로 프로젝트의 모든 의사결정과 진행상황을 체계적으로 관리함.
 - **frontend/**: **Vue.js 3.0** 기반, ChatInterface/위젯/상태관리 등 컴포넌트화
 
 ### 실무적 장점
@@ -177,7 +186,12 @@ frontend/
 
 ### 예시: intent별 핸들러 패턴
 ```python
-from core.handlers.intent_handler_map import INTENT_HANDLER_MAP
+from core.handlers import employee_info_handler, sales_status_handler
+INTENT_HANDLER_MAP = {
+    'employee_info': employee_info_handler,
+    'sales_status': sales_status_handler,
+    # ...
+}
 handler = INTENT_HANDLER_MAP.get(intent_tag)
 if handler:
     return handler(user_message, meta, response)
@@ -187,7 +201,7 @@ if handler:
 
 ### 채팅 API
 - `POST /api/chat`
-  - 요청: `{ "message": "string", "context": "string" }`
+  - 요청: `{ "message": "string" }`
   - 응답: `{ "response": "string", "type": "string" }`
 
 ### 벡터 스토어 API
@@ -215,6 +229,7 @@ if handler:
 ### 메모리 뱅크/정책 관리
 - memory-bank 폴더에 진행상황, 컨텍스트, 정책, 이슈 등 기록
 - 코드/정책/운영 싱크 유지, 변경 이력 명확히 관리
+- memory-bank는 프로젝트의 모든 의사결정, 기술 패턴, 진행상황, 이슈를 체계적으로 관리하는 핵심 문서 저장소임
 
 ## 테스트
 
