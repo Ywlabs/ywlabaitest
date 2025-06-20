@@ -1,0 +1,70 @@
+# [2025-06-20] chat_service.py 리팩토링 계획 (LangChain 체인 도입)
+
+## 1. 목표
+- 현재의 복잡한 if/else 분기 구조(`get_db_response`, `get_gpt_response`)를 **단일 LangChain RAG 체인**으로 통합.
+- 코드의 가독성, 유지보수성, 확장성을 대폭 향상.
+- "레시피 카드(개별 함수)" 방식에서 "컨베이어 벨트(통합 체인)" 방식으로 전환.
+
+## 2. 핵심 실행 계획
+
+### 1단계: "통합 검색기 (Unified Retriever)" 구현
+- **목표:** Q&A 검색과 정책 문서 검색을 하나의 함수로 통합.
+- **함수 (예시):** `search_best_context(question)`
+- **동작 로직:**
+    1.  **Q&A 우선 검색:** 먼저 `chatbot_collection`에서 높은 유사도(예: 0.7 이상)로 질문을 검색.
+    2.  **성공 시:** 검색된 Q&A의 **정해진 답변**과 **메타데이터(핸들러 정보 포함)**를 '컨텍스트'로 반환.
+    3.  **실패 시:** `policy_collection`에서 관련 정책 문서를 먼저 검색하고 검색된 결과 Colection 을 기반으로 해당 내용을 '컨텍스트'로 반환.
+                    현재 policy_collection 검색 모델이나 알고리즘은 잘 되고 있으니 현상태 유지 한 상태로 업데이트 할것 
+
+### 2단계: "통합 프롬프트 템플릿" 정의
+- **목표:** 검색된 컨텍스트가 'Q&A 답변'이든 '정책 문서'든 모두 유연하게 처리할 수 있는 프롬프트를 생성.
+- **위치:** `core/profiles/gpt_prompt_profile.json`
+- **프로필 이름 (예시):** `RAG_unified_assistant`
+- **템플릿 내용 (예시):**
+    ```
+    당신은 사용자의 질문에 답변하는 AI 어시스턴트입니다.
+    아래 '참고 정보'를 기반으로 사용자의 질문에 가장 적절한 답변을 생성하세요.
+
+    # 참고 정보
+    {context}
+
+    # 사용자 질문
+    {question}
+
+    '참고 정보'가 이미 완전한 답변 형태라면, 내용을 자연스럽게 다듬어서 전달하세요.
+    '참고 정보'가 정책 문서의 일부라면, 내용을 요약하고 사용자가 이해하기 쉽게 설명해주세요.
+    ```
+- **Input Variables:** `["context", "question"]`
+
+### 3단계: `get_ai_response` 함수를 "LangChain 체인"으로 재구성
+- **목표:** 기존의 `get_ai_response`, `get_db_response`, `get_gpt_response` 함수들의 복잡한 호출 관계를 단일 LCEL(LangChain Expression Language) 체인으로 대체.
+- **새 함수 (예시):** `get_ai_response_with_chain(question)`
+- **LCEL 파이프라인 구성 예시:**
+    ```python
+    from langchain.schema.runnable import RunnablePassthrough
+    from langchain.schema.output_parser import StrOutputParser
+
+    # ... retriever와 prompt_template 준비 ...
+
+    rag_chain = (
+        {
+            "context": retriever,  # 1단계에서 만든 통합 검색기
+            "question": RunnablePassthrough() 
+        }
+        | prompt_template # 2단계에서 만든 통합 프롬프트
+        | llm
+        | StrOutputParser()
+    )
+
+    # 체인 실행
+    final_response = rag_chain.invoke(question)
+    ```
+- **동적 핸들러 처리:**
+    - 체인 실행 **후**, `retriever`가 반환한 컨텍스트에 `response_handler` 정보가 있는지 확인.
+    - 핸들러 정보가 있다면, LLM이 생성한 응답 대신 핸들러 함수를 실행하여 최종 결과를 반환.
+
+## 3. 기대 효과
+- **코드 간결화:** 복잡한 `if/else` 분기문이 제거되고, `A | B | C` 형태의 직관적인 파이프라인으로 로직이 통일됨.
+- **확장성 향상:** 향후 '사내 위키', '이전 대화 기록' 등 새로운 검색 소스를 추가할 때, **통합 검색기(`Retriever`)만 수정**하면 되어 작업 범위가 최소화됨.
+- **유연성 증가:** LLM 모델, 프롬프트, 결과 파서(Parser) 등을 체인의 부품처럼 쉽게 교체할 수 있음.
+- **디버깅 용이:** LangChain의 디버깅 도구(예: LangSmith)를 통해 각 단계별 데이터 흐름을 명확하게 추적할 수 있음. 

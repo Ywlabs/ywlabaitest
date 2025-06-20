@@ -8,6 +8,8 @@
 - Element Plus
 - Lottie-web
 - localStorage
+- marked: Markdown 파서
+- dompurify: HTML Sanitizer
 
 ### 백엔드
 - Python 3.8+
@@ -16,6 +18,10 @@
 - Flask-SQLAlchemy
 - SQLAlchemy
 - python-dotenv
+- LangChain
+- langchain-openai
+- langchain-community
+- ChromaDB
 - OpenAI API
 - sentence-transformers
 - numpy
@@ -25,6 +31,7 @@
 
 ### 데이터베이스
 - MySQL
+- ChromaDB (for RAG)
 
 ## 개발 환경 설정
 ### 사전 요구사항
@@ -45,15 +52,15 @@
 
 ## 의존성
 ### 프로덕션 의존성
-- 프론트엔드: vue, vue-router, pinia, element-plus, axios, @vueuse/core, lottie-web
-- 백엔드: Flask, Flask-Cors, Flask-SQLAlchemy, SQLAlchemy, openai, mysqlclient, PyMySQL, sentence-transformers, numpy
+- 프론트엔드: vue, vue-router, pinia, element-plus, axios, @vueuse/core, lottie-web, marked, dompurify
+- 백엔드: Flask, Flask-Cors, Flask-SQLAlchemy, SQLAlchemy, openai, mysqlclient, PyMySQL, sentence-transformers, numpy, langchain, langchain-openai, langchain-community, chromadb
 
 ### 개발 의존성
 - 프론트엔드: typescript, @vitejs/plugin-vue, vue-tsc, @types/node, vite, path
 - 백엔드: pytest, black, flake8, python-dotenv
 
 ## 기술적 제약사항
-- 프론트엔드: HMR/동적 import 관련 Vite 환경 이슈(해결)
+- 프론트엔드: HMR/동적 import 관련 Vite 환경 이슈(해결). `dompurify`를 통해 XSS 공격 방지 필수.
 - 위젯별 실데이터 연동은 추후 확장
 - 백엔드는 Python 3.8+ 및 MySQL 환경 필요
 - OpenAI API Key 필수
@@ -76,7 +83,7 @@ FLASK_DEBUG=True
 
 ### 프론트엔드 (.env 예시)
 ```
-VITE_API_URL=http://localhost:5000
+VITE_API_BASE_URL=http://localhost:5000
 ```
 
 ## 참고사항

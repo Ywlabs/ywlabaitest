@@ -108,6 +108,20 @@ export default {
               arr.push({ type: 'user', content: item.user_message });
             }
             if (item.ai_response && item.ai_response.trim()) {
+              let responseData = null;
+              try {
+                if (item.response_json && typeof item.response_json === 'string') {
+                  // DB의 response_json은 문자열이므로 객체로 파싱하고,
+                  // 실시간 메시지와 구조를 맞추기 위해 'data' 속성으로 감싸줍니다.
+                  responseData = { data: JSON.parse(item.response_json) };
+                } else if (item.response_json) {
+                  // 이미 객체인 경우에도 동일한 구조로 감싸줍니다.
+                  responseData = { data: item.response_json };
+                }
+              } catch (e) {
+                console.error('채팅 기록의 response_json 파싱 오류:', item.response_json, e);
+              }
+
               arr.push({
                 type: 'ai',
                 content: item.ai_response,
@@ -115,7 +129,7 @@ export default {
                 route_type: item.route_type,
                 route_name: item.route_name,
                 route_path: item.route_path,
-                response_json: item.response_json
+                response_json: responseData
               });
             }
             return arr;

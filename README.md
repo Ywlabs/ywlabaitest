@@ -53,9 +53,10 @@
 - Redis (캐싱)
 
 ### Frontend
-- Vue.js 3
+- **Vue.js 3.0**
 - TypeScript
 - Pinia (상태관리)
+- Vite (번들러)
 - Axios
 - TailwindCSS
 
@@ -167,7 +168,7 @@ frontend/
   - intent별 후처리/DB조회/템플릿 로직은 core/handlers 하위 핸들러로 분리, intent→handler 매핑은 intent_handler_map.py에서 관리
 - **services/**: 실제 비즈니스 로직(핸들러 호출, DB/외부 API 연동 등)
 - **memory-bank/**: 정책/진행상황/컨텍스트/이슈 등 기록, 코드-정책-운영 싱크 유지
-- **frontend/**: Vue.js 기반, ChatInterface/위젯/상태관리 등 컴포넌트화
+- **frontend/**: **Vue.js 3.0** 기반, ChatInterface/위젯/상태관리 등 컴포넌트화
 
 ### 실무적 장점
 - 모든 공통/핵심 모듈이 core 하위에 일원화되어 확장성, 유지보수성, 협업 효율이 크게 향상됨

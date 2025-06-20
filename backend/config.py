@@ -27,7 +27,7 @@ class BaseConfig:
                 "embedding_model": "snunlp/KR-SBERT-V40K-klueNLI-augSTS",
                 "parser": "docx",
                 "search_top_k": 5,
-                "similarity_threshold": 0.6,  # 정책 문서는 높은 정확도 필요
+                "similarity_threshold": 0.6,  # 더 많은 검색 결과를 포함하기 위해 임계값 조정 (0.7 -> 0.5)
                 "hnsw:space": "cosine",
                 "hnsw:construction_ef": 200,  # 정책 문서는 더 정확한 검색 필요
                 "hnsw:search_ef": 200,
@@ -59,7 +59,7 @@ class BaseConfig:
                 "get_all_func": "services.pattern_service.get_all_patterns",
                 "to_doc_func": "core.converters.pattern_converter.pattern_to_document",
                 "search_top_k": 5,
-                "similarity_threshold": 0.8,  # 챗봇 패턴은 높은 정확도 필요
+                "similarity_threshold": 0.7,  # 챗봇 패턴은 높은 정확도 필요
                 "hnsw:space": "cosine",
                 "hnsw:construction_ef": 200,  # 챗봇은 더 정확한 검색 필요
                 "hnsw:search_ef": 200,

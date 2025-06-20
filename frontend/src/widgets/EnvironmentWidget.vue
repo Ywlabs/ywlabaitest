@@ -195,7 +195,7 @@ export default {
           const weatherData = data.weather || {}
           weather.value.temp = weatherData.temp ? Math.round(Number(weatherData.temp)) : 0
           weather.value.main = weatherData.main || ''
-          weather.value.desc = weatherData.description || ''
+          weather.value.desc = weatherData.weather_desc || weatherData.description || ''
         } catch (e) {
           console.error('날씨 정보 업데이트 실패:', e)
           weather.value.temp = 0

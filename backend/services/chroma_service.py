@@ -408,27 +408,49 @@ def validate_embedding_dimension(query_embedding: List[float], collection_dimens
         return False
     return True
 
+def search_rag_documents(query: str) -> List[Document]:
+    """
+    [RAG ChromaDB에서 유사 문서 검색]
+    - 입력: 검색 쿼리
+    - 출력: 검색된 Document 리스트
+    """
+    try:
+        logger.info(f"[RAG 검색] 시작 - 쿼리: {query}")
+        all_docs = []
+        # config에 정의된 모든 RAG 컬렉션에서 검색
+        for collection_config in config.RAG_CHROMA_COLLECTIONS:
+            collection_name = collection_config['collection']
+            top_k = collection_config.get('search_top_k', 5)
+            
+            docs = search_similar_in_collection(collection_name, query, top_k=top_k)
+            
+            if docs:
+                logger.info(f"[RAG 검색] 컬렉션 '{collection_name}'에서 {len(docs)}개 문서 발견")
+                all_docs.extend(docs)
+        
+        # 유사도 점수(similarity_score) 기준으로 정렬
+        all_docs.sort(key=lambda x: x.metadata.get('similarity_score', 0), reverse=True)
+
+        if not all_docs:
+            logger.warning(f"[RAG 검색] 모든 RAG 컬렉션에서 '{query}'에 대한 문서를 찾지 못했습니다.")
+            return []
+            
+        logger.info(f"[RAG 검색] 총 {len(all_docs)}개의 관련 문서를 찾았습니다.")
+        return all_docs
+
+    except Exception as e:
+        logger.error(f"[RAG 검색] 문서 검색 중 오류 발생: {str(e)}")
+        return []
+
 def get_similar_context_from_chroma(query: str) -> str:
     """
-    [ChromaDB에서 유사 문맥 검색]
+    [ChromaDB에서 유사 문맥 검색] - 레거시 호환성을 위해 유지
     - 입력: 검색 쿼리
     - 출력: 검색된 문맥 문자열
     """
     try:
         logger.info(f"[문맥검색] 시작 - 쿼리: {query}")
-        # 각 컬렉션에서 검색
-        all_docs = []
-        for collection in config.RAG_CHROMA_COLLECTIONS:
-            docs = search_similar_in_collection(collection['collection'], query)
-            if docs:  # 검색 결과가 있는 컬렉션만 로깅
-                logger.info(f"[문맥검색] 컬렉션 {collection['collection']} 검색 결과: {len(docs)}개 문서")
-                # 검색된 문서 상세 로깅
-                for i, doc in enumerate(docs):
-                    logger.info(f"[문맥검색] 문서 {i+1}:")
-                    logger.info(f"[문맥검색] - 내용: {doc.page_content[:200]}...")
-                    logger.info(f"[문맥검색] - 유사도: {doc.metadata.get('similarity_score', 'N/A')}")
-                    logger.info(f"[문맥검색] - 메타데이터: {doc.metadata}")
-            all_docs.extend(docs)
+        all_docs = search_rag_documents(query)
         
         # 검색 결과가 없으면 빈 문자열 반환
         if not all_docs:
