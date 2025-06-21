@@ -164,15 +164,28 @@ def get_ai_response(question: str, chat_history: Optional[List[Dict[str, str]]] 
     logger.info(f"[최종 응답] GPT 기반 응답 반환. (소요시간: {time.time() - start_time:.2f}초)")
     return gpt_response
 
-def save_chat_interaction(user_message, ai_response, intent_tag, route_code, response_source, response_time, response_json=None):
+def save_chat_interaction(user_message, ai_response, intent_tag, route_code, response_source, response_time, response_json=None, user_id=None):
+    """
+    [챗봇 상호작용 저장]
+    - 입력: 
+        - user_message: 사용자 메시지
+        - ai_response: AI 응답
+        - intent_tag: 의도 태그
+        - route_code: 라우트 코드
+        - response_source: 응답 소스
+        - response_time: 응답 시간
+        - response_json: 응답 JSON 데이터
+        - user_id: 사용자 ID (새로 추가)
+    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute('''
                 INSERT INTO chat_history 
-                (user_message, ai_response, intent_tag, route_code, response_source, response_time, response_json)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (user_id, user_message, ai_response, intent_tag, route_code, response_source, response_time, response_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
+                user_id,
                 user_message,
                 ai_response,
                 intent_tag,
@@ -182,16 +195,27 @@ def save_chat_interaction(user_message, ai_response, intent_tag, route_code, res
                 json.dumps(response_json, ensure_ascii=False) if response_json else None
             ))
             conn.commit()
+            logger.info(f"[CHAT] 챗봇 상호작용 저장 완료 - 사용자: {user_id}")
+    except Exception as e:
+        logger.error(f"[CHAT] 챗봇 상호작용 저장 실패: {str(e)}")
     finally:
         conn.close()
 
-def get_chat_history():
-    """챗봇 히스토리를 조회합니다."""
-    logger.info("[CHAT] 챗봇 히스토리 조회 시작")
+def get_chat_history(user_id, limit=20):
+    """
+    [챗봇 히스토리 조회]
+    - 입력: 
+        - user_id: 사용자 ID (필수)
+        - limit: 조회할 레코드 수 (기본값: 20)
+    - 출력: 
+        - 챗봇 히스토리 리스트
+    """
+    logger.info(f"[CHAT] 챗봇 히스토리 조회 시작 - 사용자: {user_id}, 제한: {limit}건")
     
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            # 특정 사용자의 히스토리만 조회 (최근 20건)
             cursor.execute('''
                 SELECT 
                     ch.id,
@@ -207,8 +231,11 @@ def get_chat_history():
                     ch.response_json
                 FROM chat_history ch
                 LEFT JOIN routes r ON ch.route_code = r.route_code
+                WHERE ch.user_id = %s
                 ORDER BY ch.created_at DESC 
-            ''')
+                LIMIT %s
+            ''', (user_id, limit))
+            
             rows = cursor.fetchall()
             history = []
             for row in rows:
@@ -225,7 +252,7 @@ def get_chat_history():
                     'created_at': row['created_at'].isoformat() if row['created_at'] else None,
                     'response_json': row['response_json']
                 })
-            logger.info(f"[CHAT] 챗봇 히스토리 조회 완료: {len(history)}개 항목")
+            logger.info(f"[CHAT] 챗봇 히스토리 조회 완료: {len(history)}개 항목 (사용자: {user_id}, 제한: {limit}건)")
             return history
     except Exception as e:
         logger.error(f"[CHAT] 챗봇 히스토리 조회 중 오류 발생: {str(e)}")
@@ -248,5 +275,47 @@ def get_popular_questions():
             ''')
             # 프론트엔드 호환성을 위해 질문 문자열 리스트를 반환합니다.
             return [row['user_message'] for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+def migrate_chat_history_user_id():
+    """
+    [기존 챗봇 히스토리 마이그레이션]
+    - 기존 chat_history 테이블의 user_id가 NULL인 레코드들을 기본 사용자로 설정
+    - 주의: 이 함수는 한 번만 실행해야 함
+    """
+    logger.info("[CHAT] 챗봇 히스토리 마이그레이션 시작")
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 기본 사용자 ID (admin 사용자)
+            default_user_id = 1
+            
+            # user_id가 NULL인 레코드 수 확인
+            cursor.execute("SELECT COUNT(*) as count FROM chat_history WHERE user_id IS NULL")
+            null_count = cursor.fetchone()['count']
+            
+            if null_count == 0:
+                logger.info("[CHAT] 마이그레이션할 레코드가 없습니다.")
+                return
+            
+            logger.info(f"[CHAT] 마이그레이션 대상 레코드: {null_count}개")
+            
+            # user_id가 NULL인 레코드들을 기본 사용자로 업데이트
+            cursor.execute("""
+                UPDATE chat_history 
+                SET user_id = %s 
+                WHERE user_id IS NULL
+            """, (default_user_id,))
+            
+            updated_count = cursor.rowcount
+            conn.commit()
+            
+            logger.info(f"[CHAT] 챗봇 히스토리 마이그레이션 완료: {updated_count}개 레코드 업데이트")
+            
+    except Exception as e:
+        logger.error(f"[CHAT] 챗봇 히스토리 마이그레이션 실패: {str(e)}")
+        conn.rollback()
     finally:
         conn.close()

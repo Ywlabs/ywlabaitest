@@ -1,5 +1,5 @@
-from flask import Blueprint, request
-from services.chat_service import get_chat_history, get_popular_questions, save_chat_interaction, get_ai_response
+from flask import Blueprint, request, g
+from services.chat_service import get_chat_history, get_popular_questions, save_chat_interaction, get_ai_response, migrate_chat_history_user_id
 from common.logger import setup_logger
 from database import get_db_connection
 import re
@@ -23,8 +23,14 @@ def chat():
         data = request.get_json()
         user_message = data.get('message')
         chat_history = data.get('chat_history', [])
+        
         if not user_message:
             return ApiResponse.error("ERR_NO_MESSAGE", "메시지가 필요합니다.", reason="message 파라미터 없음", status=400)
+        
+        # JWT 토큰에서 사용자 ID 가져오기
+        user_id = g.user.get('user_id')
+        logger.info(f"[CHAT] 챗봇 요청 - 사용자: {user_id}, 메시지: {user_message[:50]}...")
+        
         response = get_ai_response(user_message, chat_history)
         save_chat_interaction(
             user_message,
@@ -33,7 +39,8 @@ def chat():
             response.get('route_code'),
             response.get('response_type'),
             None,
-            response
+            response,
+            user_id  # 사용자 ID 추가
         )
         return ApiResponse.success(data=response, message="AI 응답 생성 성공")
     except Exception as e:
@@ -44,12 +51,16 @@ def chat():
 @jwt_required  # JWT 인증 필요
 def chat_history():
     """
-    챗봇 히스토리 조회
+    챗봇 히스토리 조회 (모든 사용자는 자신의 히스토리만, 최근 20건)
     """
     try:
-        logger.info("챗봇 히스토리 조회 시작")
-        history = get_chat_history()
-        logger.info(f"챗봇 히스토리 조회 완료: {len(history)}개 항목")
+        # JWT 토큰에서 사용자 ID 가져오기
+        user_id = g.user.get('user_id')
+        
+        logger.info(f"챗봇 히스토리 조회 - 사용자: {user_id}")
+        history = get_chat_history(user_id, limit=20)  # 최근 20건만 조회
+        
+        logger.info(f"챗봇 히스토리 조회 완료: {len(history)}개 항목 (사용자: {user_id})")
         return ApiResponse.success(data=history, message="챗봇 히스토리 조회 성공")
     except Exception as e:
         logger.error(f"챗봇 히스토리 조회 중 오류 발생: {str(e)}", exc_info=True)
@@ -66,4 +77,27 @@ def popular_questions():
         return ApiResponse.success(data=questions, message="인기 질문 조회 성공")
     except Exception as e:
         logger.error(f"인기 질문 조회 중 오류 발생: {str(e)}", exc_info=True)
-        return ApiResponse.error("ERR_SERVER", "인기 질문 조회 실패", reason=str(e), status=500) 
+        return ApiResponse.error("ERR_SERVER", "인기 질문 조회 실패", reason=str(e), status=500)
+
+@chat_bp.route('/api/chat/migrate', methods=['POST'])
+@jwt_required  # JWT 인증 필요
+def migrate_chat_history():
+    """
+    챗봇 히스토리 마이그레이션 (관리자만)
+    """
+    try:
+        # JWT 토큰에서 사용자 역할 확인
+        user_role = g.user.get('role')
+        user_id = g.user.get('user_id')
+        
+        if user_role != 'admin':
+            logger.warning(f"권한 없음 - 마이그레이션 시도: 사용자 {user_id}, 역할 {user_role}")
+            return ApiResponse.error("ERR_PERMISSION", "관리자 권한이 필요합니다.", status=403)
+        
+        logger.info(f"챗봇 히스토리 마이그레이션 시작 - 관리자: {user_id}")
+        migrate_chat_history_user_id()
+        
+        return ApiResponse.success(message="챗봇 히스토리 마이그레이션이 완료되었습니다.")
+    except Exception as e:
+        logger.error(f"챗봇 히스토리 마이그레이션 중 오류 발생: {str(e)}", exc_info=True)
+        return ApiResponse.error("ERR_SERVER", "마이그레이션 실패", reason=str(e), status=500) 

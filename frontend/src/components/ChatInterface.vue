@@ -117,6 +117,20 @@ export default {
         const response = await api.get('/chat/history')
         const res = response.data
 
+        // 인증 오류 처리
+        if (
+          response.status === 401 || response.status === 403 ||
+          (res && res.success === false && (
+            res.code === 'AUTH_TOKEN_REQUIRED' ||
+            res.code === 'AUTH_TOKEN_INVALID' ||
+            res.code === 'ERR_PERMISSION'
+          ))
+        ) {
+          this.showToast('로그인 정보가 없습니다.', 'error')
+          this.$router.push('/login')
+          return
+        }
+
         if (!res.success) {
           this.showToast(res.message || '채팅 기록을 불러오는데 실패했습니다.', 'error')
           this.messages = [{ type: 'ai', content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?' }]
@@ -163,6 +177,15 @@ export default {
         this.scrollToBottom()
 
       } catch (error) {
+        // 인증 오류: 네트워크 에러로 status 접근 불가 시도
+        if (
+          error.response &&
+          (error.response.status === 401 || error.response.status === 403)
+        ) {
+          this.showToast('로그인 정보가 없습니다.', 'error')
+          this.$router.push('/login')
+          return
+        }
         this.showToast('네트워크 오류로 채팅 기록을 불러올 수 없습니다.', 'error')
         this.messages = [{
           type: 'ai',

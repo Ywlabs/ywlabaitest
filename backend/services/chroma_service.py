@@ -41,8 +41,8 @@ def get_openai_embeddings():
             raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
         _embeddings = OpenAIEmbeddings(
             openai_api_key=api_key,
-            model="text-embedding-3-small"
-        )
+    model="text-embedding-3-small"
+)
     return _embeddings
 
 # ChromaDB 클라이언트 초기화

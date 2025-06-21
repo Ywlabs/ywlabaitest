@@ -47,6 +47,8 @@ def login():
 
     user = authenticate_user(email, password)
     if not user:
+        # 로그인 실패 시에도 이력 기록 (user_id는 None)
+        log_login_history(None, False, ip, user_agent)
         # 로그인 실패 시, code와 message 순서에 맞게 전달
         return ApiResponse.error(code="AUTH_INVALID_CREDENTIALS", message='이메일 또는 비밀번호가 올바르지 않습니다.', status=401)
 
@@ -55,7 +57,7 @@ def login():
     
     # 직원 정보 추출
     employee_info = None
-    if user.get('employee_id'):
+    if user and user.get('employee_id'):
         employee_info = {
             'employee_id': user['employee_id'],
             'employee_name': user.get('employee_name'),

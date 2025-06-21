@@ -72,30 +72,22 @@ def setup_logging():
     root_logger.setLevel(getattr(logging, config.LOG_LEVEL))
     
     # 기존 핸들러 제거 (중복 방지)
-    print(f"[DEBUG] 기존 루트 로거 핸들러 수: {len(root_logger.handlers)}")
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-        print(f"[DEBUG] 루트 로거 핸들러 제거됨: {type(handler).__name__}")
     
+    # 루트 로거에만 핸들러 추가
     root_logger.addHandler(app_handler)
     root_logger.addHandler(error_handler)
     root_logger.addHandler(console_handler)
-    print(f"[DEBUG] 루트 로거 핸들러 추가 완료: {len(root_logger.handlers)}개")
     
-    # Werkzeug 로거 설정 (Flask 내부 로그)
+    # Werkzeug 로거는 propagate=True로 설정하여 루트 로거로 전파
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.setLevel(getattr(logging, config.LOG_LEVEL))
+    werkzeug_logger.propagate = True  # 루트 로거로 전파
     
-    # 기존 핸들러 제거 (중복 방지)
-    print(f"[DEBUG] 기존 Werkzeug 로거 핸들러 수: {len(werkzeug_logger.handlers)}")
+    # Werkzeug 로거의 기존 핸들러 제거 (중복 방지)
     for handler in werkzeug_logger.handlers[:]:
         werkzeug_logger.removeHandler(handler)
-        print(f"[DEBUG] Werkzeug 로거 핸들러 제거됨: {type(handler).__name__}")
-    
-    werkzeug_logger.addHandler(app_handler)
-    werkzeug_logger.addHandler(error_handler)
-    werkzeug_logger.addHandler(console_handler)
-    print(f"[DEBUG] Werkzeug 로거 핸들러 추가 완료: {len(werkzeug_logger.handlers)}개")
     
     return app_log_file, error_log_file
 

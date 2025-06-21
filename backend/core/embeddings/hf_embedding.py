@@ -1,6 +1,10 @@
 # HuggingFace 임베딩 관련 함수/클래스는 이 파일에 구현하세요.
 
 import logging
+import time
+import threading
+import os
+import shutil
 from typing import List, Union, Dict
 from sentence_transformers import SentenceTransformer
 from config import get_config
@@ -14,11 +18,16 @@ config = get_config()
 
 # 전역 변수로 모델 저장
 _embedding_models = {}
+_model_locks = {}  # 모델별 락 추가
 
 # 모델별 차원 정보 (384차원만 지원)
 MODEL_DIMENSIONS = {
     "snunlp/KR-SBERT-V40K-klueNLI-augSTS": 384
 }
+
+# 모델 로딩 설정
+MODEL_LOAD_TIMEOUT = 300  # 5분 타임아웃
+MODEL_LOAD_RETRIES = 3    # 3회 재시도
 
 def reduce_dimension(embedding: List[float], target_dim: int = 384) -> List[float]:
     """
@@ -123,7 +132,7 @@ class EmbeddingWrapper:
                     # 4-3. 차원 검증
                     if len(emb) != self.dimension:
                         logger.warning(f"[HF] 임베딩 차원 불일치: {len(emb)} != {self.dimension}, 0으로 채움")
-                        result = np.zeros(self.dimension)
+                        result = np.zeros(self.dimension or 384)
                         result[:len(emb)] = emb
                         emb = result
                     
@@ -132,7 +141,7 @@ class EmbeddingWrapper:
                 except Exception as e:
                     logger.error(f"[HF] 임베딩 처리 중 오류 발생: {str(e)}")
                     # 오류 발생 시 0 벡터로 대체
-                    reduced.append(np.zeros(self.dimension).tolist())
+                    reduced.append(np.zeros(self.dimension or 384).tolist())
             
             return reduced
             
@@ -145,7 +154,7 @@ class EmbeddingWrapper:
         try:
             # 1. 입력 검증
             if not text or not text.strip():
-                return np.zeros(self.dimension).tolist()
+                return np.zeros(self.dimension or 384).tolist()
                 
             # 2. 임베딩 생성
             embedding = self.model.encode(text, output_value='sentence_embedding')
@@ -158,12 +167,13 @@ class EmbeddingWrapper:
             # 4. 차원 변환 (768 -> 384)
             if len(embedding) == 768:
                 # 768차원을 384차원으로 변환 (평균 풀링)
-                embedding = embedding.reshape(2, 384).mean(axis=0)
+                reshaped = embedding.reshape(2, 384)
+                embedding = np.mean(reshaped, axis=0)
             
             # 5. 차원 검증
             if len(embedding) != self.dimension:
                 logger.warning(f"[HF] 임베딩 차원 불일치: {len(embedding)} != {self.dimension}, 0으로 채움")
-                result = np.zeros(self.dimension)
+                result = np.zeros(self.dimension or 384)
                 result[:len(embedding)] = embedding
                 embedding = result
             
@@ -171,7 +181,7 @@ class EmbeddingWrapper:
             
         except Exception as e:
             logger.error(f"[HF] 쿼리 임베딩 생성 중 오류 발생: {str(e)}")
-            return np.zeros(self.dimension).tolist()
+            return np.zeros(self.dimension or 384).tolist()
 
 def get_hf_embedding(model_name: str) -> EmbeddingWrapper:
     """
@@ -181,7 +191,7 @@ def get_hf_embedding(model_name: str) -> EmbeddingWrapper:
     - 출력: 
         - 임베딩 모델 래퍼
     """
-    global _embedding_models
+    global _embedding_models, _model_locks
     
     # 모델 이름이 없으면 에러
     if not model_name:
@@ -191,22 +201,50 @@ def get_hf_embedding(model_name: str) -> EmbeddingWrapper:
     if model_name in _embedding_models:
         return _embedding_models[model_name]
     
-    try:
-        logger.info(f"[HF] 임베딩 모델 로드 시작: {model_name}")
+    # 모델별 락 생성
+    if model_name not in _model_locks:
+        _model_locks[model_name] = threading.Lock()
+    
+    # 락을 사용하여 동시 로딩 방지
+    with _model_locks[model_name]:
+        # 락 획득 후 다시 확인 (다른 스레드가 로드했을 수 있음)
+        if model_name in _embedding_models:
+            return _embedding_models[model_name]
         
-        # 모델 초기화 (SentenceTransformer 직접 사용)
-        model = SentenceTransformer(model_name)
+        # 재시도 로직으로 모델 로딩
+        last_error = None
+        for attempt in range(MODEL_LOAD_RETRIES):
+            try:
+                logger.info(f"[HF] 임베딩 모델 로드 시작: {model_name} (시도 {attempt + 1}/{MODEL_LOAD_RETRIES})")
+                
+                # 타임아웃 설정으로 모델 초기화
+                start_time = time.time()
+                model = SentenceTransformer(model_name)
+                load_time = time.time() - start_time
+                
+                # 래퍼로 감싸서 저장
+                wrapper = EmbeddingWrapper(model, model_name)
+                _embedding_models[model_name] = wrapper
+                
+                logger.info(f"[HF] 임베딩 모델 로드 완료: {model_name} (차원: {wrapper.dimension}, 로딩시간: {load_time:.2f}초)")
+                return wrapper
+                
+            except Exception as e:
+                last_error = e
+                logger.warning(f"[HF] 임베딩 모델 로드 실패 (시도 {attempt + 1}/{MODEL_LOAD_RETRIES}): {str(e)}")
+                
+                if attempt < MODEL_LOAD_RETRIES - 1:
+                    # 재시도 전 대기 (지수 백오프)
+                    wait_time = 2 ** attempt
+                    logger.info(f"[HF] {wait_time}초 후 재시도...")
+                    time.sleep(wait_time)
         
-        # 래퍼로 감싸서 저장
-        wrapper = EmbeddingWrapper(model, model_name)
-        _embedding_models[model_name] = wrapper
-        
-        logger.info(f"[HF] 임베딩 모델 로드 완료: {model_name} (차원: {wrapper.dimension})")
-        return wrapper
-        
-    except Exception as e:
-        logger.error(f"[HF] 임베딩 모델 초기화 실패: {str(e)}")
-        raise
+        # 모든 재시도 실패
+        logger.error(f"[HF] 임베딩 모델 초기화 최종 실패: {str(last_error)}")
+        if last_error:
+            raise last_error
+        else:
+            raise RuntimeError("임베딩 모델 초기화 실패")
 
 def get_embeddings(texts: List[str], model_name: str) -> List[List[float]]:
     """
@@ -224,3 +262,40 @@ def get_embeddings(texts: List[str], model_name: str) -> List[List[float]]:
     except Exception as e:
         logger.error(f"[HF] 임베딩 생성 실패: {str(e)}")
         raise 
+
+def clear_hf_cache():
+    """
+    [HuggingFace 캐시 디렉토리 정리]
+    - filelock 문제 해결을 위해 캐시 정리
+    """
+    try:
+        # HuggingFace 캐시 디렉토리 경로
+        cache_dir = os.path.expanduser("~/.cache/huggingface")
+        
+        if os.path.exists(cache_dir):
+            # .locks 디렉토리만 정리
+            locks_dir = os.path.join(cache_dir, "hub", ".locks")
+            if os.path.exists(locks_dir):
+                logger.info(f"[HF] 캐시 락 파일 정리 시작: {locks_dir}")
+                
+                # 오래된 락 파일들 정리 (1시간 이상 된 파일)
+                current_time = time.time()
+                removed_count = 0
+                
+                for root, dirs, files in os.walk(locks_dir):
+                    for file in files:
+                        if file.endswith('.lock'):
+                            file_path = os.path.join(root, file)
+                            try:
+                                # 파일 수정 시간 확인
+                                mtime = os.path.getmtime(file_path)
+                                if current_time - mtime > 3600:  # 1시간 이상
+                                    os.remove(file_path)
+                                    removed_count += 1
+                            except Exception as e:
+                                logger.warning(f"[HF] 락 파일 정리 중 오류: {file_path} - {str(e)}")
+                
+                logger.info(f"[HF] 캐시 락 파일 정리 완료: {removed_count}개 파일 제거")
+                
+    except Exception as e:
+        logger.warning(f"[HF] 캐시 정리 중 오류 발생: {str(e)}") 
