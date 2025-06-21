@@ -29,11 +29,21 @@ logger = logging.getLogger(__name__)
 # 설정 로드
 config = get_config()
 
-# OpenAI 임베딩 모델 초기화
-embeddings = OpenAIEmbeddings(
-    openai_api_key=os.getenv("OPENAI_API_KEY"),
-    model="text-embedding-3-small"
-)
+# OpenAI 임베딩 모델 초기화 (지연 초기화)
+_embeddings = None
+
+def get_openai_embeddings():
+    """OpenAI 임베딩 모델을 지연 초기화하여 반환"""
+    global _embeddings
+    if _embeddings is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+        _embeddings = OpenAIEmbeddings(
+            openai_api_key=api_key,
+            model="text-embedding-3-small"
+        )
+    return _embeddings
 
 # ChromaDB 클라이언트 초기화
 client = Client(ChromaSettings(
@@ -107,7 +117,7 @@ def initialize_rag_collections():
             # 4. 문서 임베딩 생성 및 저장
             texts = [doc.page_content for doc in docs]
             metadatas = [doc.metadata for doc in docs]
-            embeddings_list = embeddings.embed_documents(texts)
+            embeddings_list = get_openai_embeddings().embed_documents(texts)
             
             # 5. 컬렉션에 추가
             collection.add(
@@ -268,29 +278,38 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
         - 검색된 Document 리스트
     """
     try:
-        # 1. 컬렉션 가져오기
+        # 1. 컬렉션 존재 여부 확인 (수정된 로직)
+        available_collections = client.list_collections()
+        collection_names = [col.name for col in available_collections]
+        
+        if collection_name not in collection_names:
+            logger.error(f"[검색] 컬렉션이 존재하지 않습니다: {collection_name}")
+            logger.info(f"[검색] 사용 가능한 컬렉션: {available_collections}")
+            return []
+        
+        # 2. 컬렉션 가져오기
         collection = client.get_collection(collection_name)
         
-        # 2. 컬렉션 상태 로깅
+        # 3. 컬렉션 상태 로깅
         logger.info(f"[검색] 컬렉션: {collection_name}")
         current_model = collection.metadata.get('embedding_model')
         logger.info(f"[검색] 임베딩 모델: {current_model}")
         
-        # 3. 컬렉션 데이터 확인
+        # 4. 컬렉션 데이터 확인
         count = collection.count()
         logger.info(f"[검색] 컬렉션 데이터 수: {count}")
         if count == 0:
             logger.warning(f"[검색] 컬렉션에 데이터가 없습니다: {collection_name}")
             return []
         
-        # 4. 임베딩 차원 확인 및 검증
+        # 5. 임베딩 차원 확인 및 검증
         collection_dimension = collection.metadata.get('hnsw:dimension', 384)
         
-        # 5. 쿼리 임베딩 생성 (컬렉션의 모델 사용)
+        # 6. 쿼리 임베딩 생성 (컬렉션의 모델 사용)
         query_embedding = get_hf_embedding(current_model).embed_query(query)
         logger.info(f"[검색] 쿼리 임베딩 차원: {len(query_embedding)}")
         
-        # 5-1. 쿼리 임베딩 정상 여부 체크
+        # 6-1. 쿼리 임베딩 정상 여부 체크
         if any(np.isnan(x) for x in query_embedding):
             logger.error("[검색] 쿼리 임베딩에 nan 값 포함")
             return []
@@ -298,33 +317,33 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
             logger.error("[검색] 쿼리 임베딩에 inf 값 포함")
             return []
         
-        # 6. 임베딩 차원 검증
+        # 7. 임베딩 차원 검증
         if not validate_embedding_dimension(query_embedding, collection_dimension):
             logger.error(f"[검색] 임베딩 차원 불일치: 컬렉션({collection_dimension}) != 쿼리({len(query_embedding)})")
             return []
         
-        # 7. 유사도 검색 (top_k를 2배로 늘려서 필터링 여유 확보)
+        # 8. 유사도 검색 (top_k를 2배로 늘려서 필터링 여유 확보)
         try:
-            # 7-1. query_embeddings 방식으로 검색
+            # 8-1. query_embeddings 방식으로 검색
             results = collection.query(
                 query_embeddings=[query_embedding],
                 n_results=top_k * 2,
                 include=["metadatas", "distances", "documents"]
             )
         except AttributeError:
-            # 7-2. search 방식으로 검색 (이전 버전 호환)
+            # 8-2. search 방식으로 검색 (이전 버전 호환)
             results = collection.search(
                 query_embeddings=[query_embedding],
                 n_results=top_k * 2,
                 include=["metadatas", "distances", "documents"]
             )
         
-        # 7-3. 검색 결과 정상 여부 체크
+        # 8-3. 검색 결과 정상 여부 체크
         if not results or not results.get('distances'):
             logger.error("[검색] 검색 결과 없음")
             return []
             
-        # 7-4. 거리 값 정상 여부 체크
+        # 8-4. 거리 값 정상 여부 체크
         distances = results['distances'][0]
         if any(np.isnan(d) for d in distances):
             logger.error("[검색] 검색 결과에 nan 거리 포함")
@@ -333,7 +352,7 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
             logger.error("[검색] 검색 결과에 inf 거리 포함")
             return []
         
-        # 8. 검색 결과 로깅
+        # 9. 검색 결과 로깅
         if results and results.get('documents'):
             logger.info(f"[검색] 검색 결과 수: {len(results['documents'][0])}")
             for i, doc in enumerate(results['documents'][0]):
@@ -344,14 +363,10 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
             logger.warning("[검색] 검색 결과가 없습니다")
             return []
         
-        # 9. 검색 결과를 Document로 변환 및 필터링
+        # 10. 검색 결과를 Document로 변환 및 필터링
         documents = []
         if results and results.get('documents'):
             # 컬렉션의 임계값 가져오기 (기본값 0.7로 설정)
-            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
-            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
-            logger.info(f"[검색] 컬렉션 임계값: {collection.metadata.get('similarity_threshold')}")
-            
             collection_threshold = float(collection.metadata.get('similarity_threshold', 0.7))
             logger.info(f"[검색] 컬렉션 임계값: {collection_threshold}")
             
@@ -359,19 +374,19 @@ def search_similar_in_collection(collection_name: str, query: str, top_k: int = 
                 metadata = results['metadatas'][0][i] if results['metadatas'] else {}
                 distance = results['distances'][0][i] if results['distances'] else float('inf')
                 
-                # 9-1. 기본 유사도 점수 계산 (거리를 유사도로 변환)
+                # 10-1. 기본 유사도 점수 계산 (거리를 유사도로 변환)
                 similarity_score = 1.0 - (distance / 2.0) if distance != float('inf') else 0.0
                 
-                # 9-2. 검색 가중치 적용
+                # 10-2. 검색 가중치 적용
                 search_weight = metadata.get('search_weight', 0.5)
                 weighted_score = similarity_score * search_weight
                 
-                # 9-3. 임계값 체크 (컬렉션의 임계값 사용)
+                # 10-3. 임계값 체크 (컬렉션의 임계값 사용)
                 if similarity_score < collection_threshold:
                     logger.debug(f"[검색] 임계값 미달: {similarity_score:.4f} < {collection_threshold} (문서: {doc[:100]}...)")
                     continue
                 
-                # 9-4. Document 생성
+                # 10-4. Document 생성
                 document = Document(
                     page_content=doc,
                     metadata={

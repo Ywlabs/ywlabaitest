@@ -14,7 +14,7 @@ legacy_bp = Blueprint('legacy', __name__)
 
 @legacy_bp.route('/api/environment/current', methods=['GET'])
 @jwt_required  # JWT 인증 필요
-def get_current_environment():
+def get_environment_current():
     """현재 환경 정보 조회"""
     try:
         logger.info("[API] 현재 환경 정보 조회 요청 시작")
@@ -67,9 +67,9 @@ def get_current_environment():
         return ApiResponse.error("ERR_SERVER", "환경 정보 조회 실패", reason=str(e), status=500)
 
 @legacy_bp.route('/api/environment/stream', methods=['GET'])
-@jwt_required  # JWT 인증 필요
-def stream_environment():
-    """SSE 스트림 연결 (route)"""
+@jwt_required
+def get_environment_stream():
+    """SSE 스트림 연결"""
     logger.info("[API] SSE 스트림 연결 요청: /environment/stream")
     
     # 환경 정보 서비스 인스턴스 생성
@@ -137,3 +137,36 @@ def stream_environment():
             'Access-Control-Allow-Credentials': 'true'  # Credentials 허용
         }
     ) 
+
+# @legacy_bp.route('/api/legacy/employees', methods=['GET'])
+# @jwt_required  # JWT 인증 필요
+# def get_legacy_employees():
+#     """
+#     레거시 직원 목록 조회
+#     """
+#     try:
+#         logger.info("레거시 직원 목록 조회 시작")
+#         employees = get_legacy_employee_list()
+#         logger.info(f"레거시 직원 목록 조회 완료: {len(employees)}명")
+#         return ApiResponse.success(data=employees, message="레거시 직원 목록 조회 성공")
+#     except Exception as e:
+#         logger.error(f"레거시 직원 목록 조회 중 오류 발생: {str(e)}", exc_info=True)
+#         return ApiResponse.error("ERR_SERVER", "레거시 직원 목록 조회 실패", reason=str(e), status=500)
+
+# @legacy_bp.route('/api/legacy/employee/<int:employee_id>', methods=['GET'])
+# @jwt_required  # JWT 인증 필요
+# def get_legacy_employee_detail(employee_id):
+#     """
+#     레거시 직원 상세 정보 조회
+#     """
+#     try:
+#         logger.info(f"레거시 직원 상세 정보 조회 시작: employee_id={employee_id}")
+#         employee = get_legacy_employee_detail_data(employee_id)
+#         if not employee:
+#             logger.warning(f"레거시 직원을 찾을 수 없음: employee_id={employee_id}")
+#             return ApiResponse.error("ERR_NOT_FOUND", "직원을 찾을 수 없습니다.", reason=f"employee_id: {employee_id}", status=404)
+#         logger.info(f"레거시 직원 상세 정보 조회 완료: employee_id={employee_id}")
+#         return ApiResponse.success(data=employee, message="레거시 직원 상세 정보 조회 성공")
+#     except Exception as e:
+#         logger.error(f"레거시 직원 상세 정보 조회 중 오류 발생: employee_id={employee_id}, error={str(e)}", exc_info=True)
+#         return ApiResponse.error("ERR_SERVER", "레거시 직원 상세 정보 조회 실패", reason=str(e), status=500) 

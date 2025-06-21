@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ywlab-app
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+      - PYTHONPATH=/app/backend
+    volumes:
+      - /home/ywlabs04/apps_log/enermind/flask/:/app/backend/logs/
+      - ./uploads:/app/backend/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8085/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ywlab-network
+
+networks:
+  ywlab-network:
+    driver: bridge 

@@ -172,7 +172,7 @@ export default {
       this.hasSearched = true;
       this.searchError = '';
       try {
-        const res = await api.post('/api/widgets/search', { query: this.searchQuery });
+        const res = await api.post('/widgets/search', { query: this.searchQuery });
         if (res.data && res.data.success) {
         this.searchResults = res.data.data;
         this.saveRecentSearch(this.searchQuery.trim())

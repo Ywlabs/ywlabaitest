@@ -76,7 +76,7 @@ export default defineComponent({
       loading.value = true;
       error.value = '';
       try {
-        const res = await api.get(`/api/sales/${selectedYear.value}`);
+        const res = await api.get(`/sales/${selectedYear.value}`);
         if (res.data && res.data.success) {
           salesData.value = res.data.data;
         } else {
@@ -92,7 +92,7 @@ export default defineComponent({
     // AI 예측(올해 기준) 데이터 조회
     const fetchAIPredict = async () => {
       try {
-        const res = await api.get(`/api/sales/${thisYear}`);
+        const res = await api.get(`/sales/${thisYear}`);
         if (res.data && res.data.success) {
           aiPredictData.value = res.data.data.ai_predict;
         }

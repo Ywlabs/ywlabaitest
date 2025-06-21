@@ -177,7 +177,7 @@ export default {
     const fetchWeatherAndAir = async () => {
       loading.value = true
       try {
-        const response = await api.get('/api/environment/current')
+        const response = await api.get('/environment/current')
         if (response.data && response.data.success) {
           updateEnvironmentData(response.data.data)
           error.value = null // 성공 시 에러 메시지 제거

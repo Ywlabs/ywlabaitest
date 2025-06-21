@@ -21,13 +21,13 @@ class BaseConfig:
         self.RAG_CHROMA_DIR = os.path.join(os.path.dirname(__file__), 'chromadb', 'rag_db')
         self.RAG_CHROMA_COLLECTIONS = [
             {
-                "path": "./metadata/docx/ywlabs_policy_20250609.docx",
+                "path": os.path.join(os.path.dirname(__file__), 'metadata', 'docx', 'ywlabs_policy_20250609.docx'),
                 "collection": "policy_collection",
                 "type": "docx",
                 "embedding_model": "snunlp/KR-SBERT-V40K-klueNLI-augSTS",
                 "parser": "docx",
                 "search_top_k": 5,
-                "similarity_threshold": 0.6,  # 더 많은 검색 결과를 포함하기 위해 임계값 조정 (0.7 -> 0.5)
+                "similarity_threshold": 0.5,  # 더 많은 검색 결과를 포함하기 위해 임계값 조정 (0.6 -> 0.5)
                 "hnsw:space": "cosine",
                 "hnsw:construction_ef": 200,  # 정책 문서는 더 정확한 검색 필요
                 "hnsw:search_ef": 200,
@@ -92,9 +92,12 @@ class DevConfig(BaseConfig):
         # OpenAI API 설정
         self.OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
         
+        # 로그 설정 (개발 환경)
+        self.LOG_DIR = os.getenv('LOG_DIR', os.path.join(os.path.dirname(__file__), 'logs'))
+        self.LOG_LEVEL = 'DEBUG'
+        
         # 기타 설정
         self.DEBUG = True
-        self.LOG_LEVEL = 'DEBUG'
 
 class ProdConfig(BaseConfig):
     """운영 환경 설정"""
@@ -117,9 +120,12 @@ class ProdConfig(BaseConfig):
         # OpenAI API 설정
         self.OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
         
+        # 로그 설정 (운영 환경 - Docker 볼륨 마운트)
+        self.LOG_DIR = os.getenv('LOG_DIR', '/app/backend/logs')
+        self.LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+        
         # 기타 설정
         self.DEBUG = False
-        self.LOG_LEVEL = 'INFO'
 
 class TestConfig(BaseConfig):
     """테스트 환경 설정"""
@@ -142,10 +148,13 @@ class TestConfig(BaseConfig):
         # OpenAI API 설정
         self.OPENAI_API_KEY = 'test_key'
         
+        # 로그 설정 (테스트 환경)
+        self.LOG_DIR = os.getenv('LOG_DIR', os.path.join(os.path.dirname(__file__), 'logs', 'test'))
+        self.LOG_LEVEL = 'DEBUG'
+        
         # 기타 설정
         self.DEBUG = True
-        self.LOG_LEVEL = 'DEBUG'
-
+        
         # 테스트 환경에서만 ChromaDB 디렉토리 변경
         self.RAG_CHROMA_DIR = './chromadb/test_rag_db'
 

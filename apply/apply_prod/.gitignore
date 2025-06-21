@@ -1,0 +1,20 @@
+# 환경변수 파일 (실제 API 키 포함)
+.env
+
+# 로그 파일
+*.log
+
+# 임시 파일
+*.tmp
+*.cache
+
+# Docker 관련
+.dockerignore
+
+# 압축 파일
+*.tar.gz
+*.zip
+
+# 백업 파일
+*.bak
+*.backup 

@@ -9,7 +9,7 @@ def setup_logger(name, log_file=None):
     Args:
         name (str): 로거 이름
         log_file (str, optional): 로그 파일 경로. 기본값은 None이며, 
-                                 None인 경우 'logs/{name}_{date}.log' 형식으로 생성됩니다.
+                                 None인 경우 '/app/backend/logs/{name}_{date}.log' 형식으로 생성됩니다.
     
     Returns:
         logging.Logger: 설정된 로거 객체
@@ -34,13 +34,14 @@ def setup_logger(name, log_file=None):
     
     # 파일 핸들러 추가
     if log_file is None:
-        # logs 디렉토리가 없으면 생성
-        if not os.path.exists('logs'):
-            os.makedirs('logs')
+        # logs 디렉토리가 없으면 생성 (절대경로 사용)
+        logs_dir = '/app/backend/logs'
+        if not os.path.exists(logs_dir):
+            os.makedirs(logs_dir)
         
         # 기본 로그 파일명 생성 (날짜 포함)
         date_str = datetime.now().strftime('%Y%m%d')
-        log_file = f'logs/{name}_{date_str}.log'
+        log_file = f'{logs_dir}/{name}_{date_str}.log'
     
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(formatter)

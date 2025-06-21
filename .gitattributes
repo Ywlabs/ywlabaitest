@@ -1,0 +1,30 @@
+# Shell 스크립트는 항상 LF 줄바꿈 유지
+*.sh text eol=lf
+*.bash text eol=lf
+
+# 배포 스크립트들
+deploy.sh text eol=lf
+apply/*/deploy.sh text eol=lf
+
+# 기타 텍스트 파일들
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.vue text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# 바이너리 파일들
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary 

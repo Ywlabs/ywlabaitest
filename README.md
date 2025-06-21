@@ -1,292 +1,457 @@
-# YW Labs AI Chatbot
+# YWLab AI Test Platform
 
-영우랩스의 AI 챗봇 프로젝트입니다. 이 프로젝트는 회사 정보, 휴가 관리, 직원 정보, 정책 안내 등 다양한 사내 정보를 자연어로 질의·응답할 수 있는 지능형 챗봇 시스템을 제공합니다.
+YWLab의 AI 테스트 플랫폼으로, Frontend(Vue.js)와 Backend(Flask)가 통합된 웹 애플리케이션입니다.
 
-## 목차
+## 📋 목차
 
-- [주요 기능](#주요-기능)
-- [기술 스택](#기술-스택)
-- [시스템 요구사항](#시스템-요구사항)
-- [설치 및 실행](#설치-및-실행)
 - [프로젝트 구조](#프로젝트-구조)
+- [기술 스택](#기술-스택)
+- [개발 환경 설정](#개발-환경-설정)
+- [로컬 개발 서버 실행](#로컬-개발-서버-실행)
+- [배포 방법](#배포-방법)
 - [API 문서](#api-문서)
-- [개발 가이드](#개발-가이드)
-- [테스트](#테스트)
-- [배포](#배포)
-- [문제 해결](#문제-해결)
-- [기여](#기여)
-- [라이선스](#라이선스)
+- [기여 가이드](#기여-가이드)
 
-## 주요 기능
+## 🏗️ 프로젝트 구조
 
-### 1. 회사 정보 및 소개
-- 회사 연혁, 비전, 조직 구조, 서비스/제품, 공지사항 안내
+```
+workspace-ywlabaitest/
+├── backend/                    # Flask 백엔드
+│   ├── app.py                 # 메인 애플리케이션
+│   ├── config.py              # 환경별 설정
+│   ├── requirements.txt       # Python 의존성
+│   ├── core/                  # 핵심 모듈
+│   │   ├── handlers/          # 인텐트별 핸들러
+│   │   ├── embeddings/        # 임베딩 관련
+│   │   ├── utils/             # 유틸리티
+│   │   └── parsers/           # 문서 파서
+│   ├── services/              # 비즈니스 로직
+│   ├── routes/                # API 라우트
+│   ├── metadata/              # 정책 문서 등
+│   └── chromadb/              # 벡터 데이터베이스
+├── frontend/                   # Vue.js 프론트엔드
+│   ├── src/
+│   │   ├── components/        # Vue 컴포넌트
+│   │   ├── views/             # 페이지 뷰
+│   │   ├── router/            # 라우터 설정
+│   │   └── common/            # 공통 모듈
+│   ├── package.json           # Node.js 의존성
+│   └── vite.config.js         # Vite 설정
+├── auto-dev.py                # 자동 개발 환경 설정
+├── dev-server.py              # 통합 개발 서버
+├── activate-and-run.bat       # Windows 자동 실행
+└── package.json               # 프로젝트 설정
+```
 
-### 2. 휴가 관리 시스템
-- 휴가 신청/조회, 정책 안내, 일정 캘린더, 승인 프로세스 안내
-
-### 3. 직원 정보 조회
-- 조직도, 연락처, 부서별 정보, 직원 검색
-
-### 4. 정책/규정 안내 (RAG)
-- 사내 정책/규정 문서 기반 RAG(검색+생성) 답변
-- 정책/복지/매출 등 도메인별 문서 검색 및 요약
-
-### 5. 자연어 기반 질의응답
-- 문맥 이해, 맞춤형 응답, 다국어 지원, 대화 이력 관리
-
-### 6. 벡터 기반 유사도 검색
-- 의미 기반 검색, 유사 질문 매칭, 실시간 검색, 임계값 기반 품질 제어
-
-### 7. 위젯/링크/동적 응답
-- 매출/복지 등 위젯 연동, 사내 시스템 링크 제공, 동적 파라미터 처리
-
-## 기술 스택
+## 🛠️ 기술 스택
 
 ### Backend
-- Python 3.8+
-- Flask 2.0+
-- LangChain
-- ChromaDB (벡터스토어)
-- OpenAI API
-- SQLAlchemy
-- MySQL (운영 DB)
-- Redis (선택적 캐싱)
+- **Python 3.11+**
+- **Flask** - 웹 프레임워크
+- **ChromaDB** - 벡터 데이터베이스
+- **MariaDB** - 관계형 데이터베이스
+- **OpenAI API** - AI 모델
+- **HuggingFace** - 임베딩 모델
 
 ### Frontend
-- **Vue.js 3.0**
-- TypeScript
-- Pinia (상태관리)
-- Vite (번들러)
-- Axios
-- Element Plus (UI)
-- marked (Markdown 파서)
-- dompurify (HTML Sanitizer)
-- Lottie-web (애니메이션)
-
-### Database
-- MySQL (운영)
-- ChromaDB (벡터스토어)
-- SQLite (개발/테스트, 선택)
+- **Vue.js 3** - 프론트엔드 프레임워크
+- **Vite** - 빌드 도구
+- **Element Plus** - UI 컴포넌트
+- **Vue Router** - 라우팅
+- **Axios** - HTTP 클라이언트
 
 ### DevOps
-- Docker
-- GitHub Actions
-- Nginx
+- **Docker** - 컨테이너화
+- **GitHub Actions** - CI/CD
+- **Nginx** - 리버스 프록시
 
-## 시스템 요구사항
+## 🚀 개발 환경 설정
 
-### 최소 요구사항
-- Python 3.8 이상
-- Node.js 16 이상
-- 4GB RAM
-- 10GB 저장 공간
+### 1. 사전 요구사항
 
-### 권장 사항
-- Python 3.10 이상
-- Node.js 18 이상
-- 8GB RAM
-- 20GB 저장 공간
+- **Python 3.11+**
+- **Node.js 18+**
+- **npm** 또는 **yarn**
+- **Git**
 
-## 설치 및 실행
+### 2. 프로젝트 클론
 
-### 백엔드 설정
-
-1. Python 가상환경 생성 및 활성화
 ```bash
+git clone https://github.com/your-username/ywlab-ai-test.git
+cd ywlab-ai-test
+```
+
+### 3. 자동 환경 설정 (권장)
+
+#### Windows
+```bash
+# 배치 파일 실행
+activate-and-run.bat
+```
+
+#### 모든 OS
+```bash
+# npm 스크립트 실행
+npm run auto
+
+# 또는 Python 스크립트 직접 실행
+python auto-dev.py
+```
+
+### 4. 수동 환경 설정
+
+#### 4.1 Python 가상환경 설정
+```bash
+# 가상환경 생성
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-```
 
-2. 의존성 설치
-```bash
-pip install -r requirements.txt
-```
+# 가상환경 활성화
+# Windows
+venv\Scripts\activate
+# Linux/Mac
+source venv/bin/activate
 
-3. 환경 변수 설정
-`.env` 파일을 생성하고 다음 환경 변수를 설정합니다:
-```env
-OPENAI_API_KEY=your_api_key
-MYSQL_HOST=localhost
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password
-MYSQL_DB=ywlabs
-MYSQL_PORT=3306
-```
-
-4. 데이터베이스 초기화
-```bash
-# 예시: 초기화 스크립트가 있다면 실행
-python backend/init_db.py
-```
-
-5. 백엔드 서버 실행
-```bash
+# Python 의존성 설치
 cd backend
-python app.py
+pip install -r requirements.txt
+cd ..
 ```
 
-### 프론트엔드 설정
-
-1. 의존성 설치
+#### 4.2 Frontend 의존성 설치
 ```bash
 cd frontend
 npm install
+cd ..
 ```
 
-2. 환경 변수 설정
-`.env` 파일을 생성하고 다음 환경 변수를 설정합니다:
-```env
-VITE_API_BASE_URL=http://localhost:5000
-```
-
-3. 개발 서버 실행
+#### 4.3 환경변수 설정
 ```bash
+# backend/.env 파일 생성 (예시)
+cp backend/env.example backend/.env
+
+# 환경변수 편집
+DATABASE_URL=mysql://username:password@host:port/database
+OPENAI_API_KEY=your_openai_api_key
+SECRET_KEY=your_secret_key_here
+
+# 로그 설정
+LOG_LEVEL=INFO
+LOG_DIR=./logs
+
+# 파일 업로드 설정
+UPLOAD_FOLDER=./uploads
+MAX_CONTENT_LENGTH=16777216
+```
+
+## 🖥️ 로컬 개발 서버 실행
+
+### 1. 자동 실행 (권장)
+
+```bash
+# 모든 것을 자동으로 처리
+npm run auto
+```
+
+### 2. 수동 실행
+
+```bash
+# 1. 가상환경 활성화
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+
+# 2. Frontend 빌드
+cd frontend && npm run build && cd ..
+
+# 3. 개발 서버 시작
+python dev-server.py
+```
+
+### 3. 접속 확인
+
+- **메인 페이지**: http://localhost:5000
+- **API 헬스체크**: http://localhost:5000/health
+- **로그인**: http://localhost:5000/login
+
+## 🚀 배포
+
+### 개발 환경
+
+#### 1. 자동 환경 설정 + 개발 서버
+```bash
+# 프로젝트 루트에서 실행
+npm run auto
+
+# 또는 직접 실행
+python deploy/dev-server/auto-dev.py
+```
+
+#### 2. 수동 개발 서버 실행
+```bash
+# 프로젝트 루트에서 실행
 npm run dev
+
+# 또는 직접 실행
+python deploy/dev-server/dev-server.py
 ```
 
-## 프로젝트 구조 (2024-06 최신)
+#### 3. Windows 배치 파일 사용
+```bash
+# 개발 서버 실행
+deploy/dev-server/dev.bat
 
-```
-backend/
-├── core/
-│   ├── handlers/      # intent별 후처리 핸들러(핸들러 패턴, 확장성/유지보수성)
-│   ├── embeddings/    # 임베딩 모델 래퍼 및 벡터 유틸(HuggingFace/OpenAI 등)
-│   ├── utils/         # 범용 유틸리티 함수(날짜, 문자열 등)
-│   ├── parsers/       # 파일/문서 파서(텍스트, PDF, 이미지 등)
-│   └── converters/    # 도메인별 Document 변환 함수(위젯 등)
-├── services/          # 비즈니스 로직(서비스 계층, DB/외부연동/핸들러 호출)
-├── common/            # 로깅, 예외, 공통 infra
-├── memory-bank/       # 정책/진행상황/컨텍스트/이슈 등 메모리 뱅크(운영/개발 싱크)
-├── database/          # DB 연결/초기화/쿼리
-├── config/            # 환경설정, 상수, 시크릿
-├── logs/              # 백엔드 로그
-└── ...
-frontend/
-├── src/components/    # ChatInterface, 공통 UI 컴포넌트
-├── src/widgets/       # 매출/복지 등 도메인별 위젯
-├── src/views/         # 주요 페이지/화면
-├── src/store/         # Pinia 상태관리
-├── src/utils/         # 프론트 유틸 함수
-└── ...
+# 가상환경 활성화 + 개발 서버 실행
+deploy/dev-server/activate-and-run.bat
 ```
 
-- **core/**: 모든 공통 모듈 일원화(핸들러, 임베딩, 유틸, 파서, 컨버터)
-  - 서비스 계층에서는 반드시 core 하위 모듈만 import
-  - intent별 후처리/DB조회/템플릿 로직은 core/handlers 하위 핸들러로 분리, intent→handler 매핑은 코드 내에서 관리(예시: INTENT_HANDLER_MAP)
-- **services/**: 실제 비즈니스 로직(핸들러 호출, DB/외부 API 연동 등)
-- **memory-bank/**: 정책/진행상황/컨텍스트/이슈 등 기록, 코드-정책-운영 싱크 유지. 문서 기반으로 프로젝트의 모든 의사결정과 진행상황을 체계적으로 관리함.
-- **frontend/**: **Vue.js 3.0** 기반, ChatInterface/위젯/상태관리 등 컴포넌트화
+### 상용 환경 (Docker)
 
-### 실무적 장점
-- 모든 공통/핵심 모듈이 core 하위에 일원화되어 확장성, 유지보수성, 협업 효율이 크게 향상됨
-- 서비스 코드는 비즈니스 로직에만 집중, 정책/핸들러/템플릿/유틸 등은 core에서 일관 관리
-- memory-bank로 정책/진행상황/컨텍스트/이슈를 명확히 관리, 코드-운영 싱크 보장
+#### 1. Docker 이미지 빌드
+```bash
+# 프로젝트 루트에서
+cd deploy/docker-prod
+docker build -t ywlab-app:latest ../..
+```
 
-### 예시: intent별 핸들러 패턴
-```python
-from core.handlers import employee_info_handler, sales_status_handler
-INTENT_HANDLER_MAP = {
-    'employee_info': employee_info_handler,
-    'sales_status': sales_status_handler,
-    # ...
+#### 2. Docker Compose 실행
+```bash
+# 개발 환경
+cd deploy/docker-prod
+docker-compose -f docker-compose.dev.yml up -d
+
+# 상용 환경
+cd deploy/docker-prod
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+#### 3. 배포 스크립트 사용
+```bash
+# 개발 환경 배포
+npm run deploy:dev
+
+# 상용 환경 배포
+npm run deploy:prod
+```
+
+### 3. GitHub Actions 자동 배포
+
+#### 3.1 GitHub Secrets 설정
+GitHub 저장소의 Settings → Secrets and variables → Actions에서 다음 설정:
+
+**개발 환경:**
+```
+DEV_HOST=your_dev_server_ip
+DEV_USERNAME=your_ssh_username
+DEV_SSH_KEY=your_private_ssh_key
+DEV_SECRET_KEY=your_dev_secret_key
+DEV_JWT_SECRET=your_dev_jwt_secret
+DEV_DB_HOST=your_dev_db_host
+DEV_DB_USER=your_dev_db_user
+DEV_DB_PASSWORD=your_dev_db_password
+DEV_DB_NAME=your_dev_db_name
+DEV_DB_PORT=your_dev_db_port
+DEV_OPENAI_API_KEY=your_dev_openai_api_key
+```
+
+**상용 환경:**
+```
+PROD_HOST=your_prod_server_ip
+PROD_USERNAME=your_ssh_username
+PROD_SSH_KEY=your_private_ssh_key
+PROD_SECRET_KEY=your_prod_secret_key
+PROD_JWT_SECRET=your_prod_jwt_secret
+PROD_DB_HOST=your_prod_db_host
+PROD_DB_USER=your_prod_db_user
+PROD_DB_PASSWORD=your_prod_db_password
+PROD_DB_NAME=your_prod_db_name
+PROD_DB_PORT=your_prod_db_port
+PROD_OPENAI_API_KEY=your_prod_openai_api_key
+```
+
+#### 3.2 자동 배포 트리거
+- `develop` 브랜치에 push → 개발 서버 자동 배포
+- `main` 브랜치에 push → 상용 서버 자동 배포
+- 매주 월요일 새벽 2시 → 자동 배포
+
+### 4. 수동 배포
+
+#### 4.1 상용 서버 설정
+```bash
+# 서버에 접속
+ssh user@your-server.com
+
+# 배포 디렉토리 생성
+mkdir -p /opt/production
+cd /opt/production
+
+# 환경변수 파일 생성
+cat > backend/.env.prod << EOF
+APP_PROFILE=prod
+FLASK_ENV=production
+FLASK_APP=app.py
+SECRET_KEY=your_production_secret_key
+JWT_SECRET=your_production_jwt_secret
+JWT_EXPIRE_MINUTES=60
+DB_HOST=your_db_host
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+DB_NAME=your_db_name
+DB_PORT=your_db_port
+OPENAI_API_KEY=your_openai_api_key
+RAG_CHROMA_DIR=./chromadb/rag_db
+LOG_LEVEL=INFO
+LOG_FILE=./logs/app.log
+DEBUG=False
+EOF
+```
+
+#### 4.2 배포 실행
+```bash
+# 최신 이미지 pull
+docker pull ghcr.io/your-repo/ywlab-app:latest
+
+# 컨테이너 교체
+cd deploy/docker-prod
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d
+
+# 헬스체크
+curl -f http://localhost:5000/health
+```
+
+### 5. Nginx 설정
+
+```nginx
+# /etc/nginx/sites-available/production
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
-handler = INTENT_HANDLER_MAP.get(intent_tag)
-if handler:
-    return handler(user_message, meta, response)
 ```
 
-## API 문서
+## 📚 API 문서
+
+### 인증 API
+- `POST /api/auth/login` - 로그인
+- `POST /api/auth/logout` - 로그아웃
+- `POST /api/auth/refresh` - 토큰 갱신
 
 ### 채팅 API
-- `POST /api/chat`
-  - 요청: `{ "message": "string" }`
-  - 응답: `{ "response": "string", "type": "string" }`
-
-### 벡터 스토어 API
-- `POST /api/vector/update`
-  - 요청: `{ "pattern_id": "string", "pattern_text": "string" }`
-  - 응답: `{ "status": "string" }`
+- `POST /api/chat` - AI 채팅
+- `GET /api/chat/history` - 채팅 기록
 
 ### 직원 정보 API
-- `GET /api/employee/{id}`
-  - 응답: `{ "name": "string", "department": "string", ... }`
+- `GET /api/employee/info` - 직원 정보 조회
+- `PUT /api/employee/info` - 직원 정보 수정
 
-## 개발 가이드
+### 매출 정보 API
+- `GET /api/sales/status` - 매출 현황
+- `GET /api/sales/trend` - 매출 트렌드
 
-### 코드 스타일
-- Python: PEP 8, 함수별 한글 docstring, response_type 기반 분기, [USER] 로그 포맷 등 준수
-- JavaScript/TypeScript: ESLint, strict 모드, 컴포넌트/스토어 분리
+### 위젯 API
+- `GET /api/widgets` - 위젯 목록
+- `POST /api/widgets` - 위젯 생성
 
-### Git 워크플로우
-1. feature/* 브랜치 생성
-2. 개발 및 테스트
-3. PR 생성
-4. 코드 리뷰
-5. main 브랜치 병합
+## 🔧 개발 가이드
 
-### 메모리 뱅크/정책 관리
-- memory-bank 폴더에 진행상황, 컨텍스트, 정책, 이슈 등 기록
-- 코드/정책/운영 싱크 유지, 변경 이력 명확히 관리
-- memory-bank는 프로젝트의 모든 의사결정, 기술 패턴, 진행상황, 이슈를 체계적으로 관리하는 핵심 문서 저장소임
+### 1. 코드 스타일
 
-## 테스트
+#### Python
+- **PEP 8** 준수
+- **한글 주석** 사용
+- **타입 힌트** 사용
 
-### 백엔드 테스트
-```bash
-cd backend
-pytest
+#### JavaScript/Vue
+- **ESLint** 규칙 준수
+- **Vue 3 Composition API** 사용
+- **한글 주석** 사용
+
+### 2. 브랜치 전략
+
+```
+main          # 상용 배포
+├── develop   # 개발/스테이징
+├── feature/* # 기능 개발
+└── hotfix/*  # 긴급 수정
 ```
 
-### 프론트엔드 테스트
+### 3. 커밋 메시지 규칙
+
+```
+feat: 새로운 기능 추가
+fix: 버그 수정
+docs: 문서 수정
+style: 코드 스타일 변경
+refactor: 코드 리팩토링
+test: 테스트 추가/수정
+chore: 빌드 프로세스 변경
+```
+
+## 🐛 문제 해결
+
+### 1. 일반적인 문제
+
+#### ChromaDB 컬렉션 오류
 ```bash
+# ChromaDB 디렉토리 초기화
+rm -rf backend/chromadb
+python dev-server.py
+```
+
+#### Frontend 빌드 오류
+```bash
+# node_modules 재설치
 cd frontend
-npm test
-```
-
-## 배포
-
-### Docker 배포
-```bash
-docker-compose up -d
-```
-
-### 수동 배포
-1. 백엔드 빌드
-```bash
-cd backend
-python -m build
-```
-
-2. 프론트엔드 빌드
-```bash
-cd frontend
+rm -rf node_modules package-lock.json
+npm install
 npm run build
 ```
 
-## 문제 해결
+#### Python 패키지 오류
+```bash
+# 가상환경 재설정
+rm -rf venv
+python -m venv venv
+venv\Scripts\activate
+pip install -r backend/requirements.txt
+```
 
-### 일반적인 문제
-1. 데이터베이스 연결 오류
-   - 데이터베이스 서버 상태 확인
-   - 연결 문자열 확인
+### 2. 로그 확인
 
-2. API 응답 지연
-   - 캐시 설정 확인
-   - 로그 확인
+```bash
+# Flask 로그
+tail -f backend/logs/app.log
 
-### 로그 확인
-- 백엔드: `backend/logs/`
-- 프론트엔드: 브라우저 개발자 도구
+# Docker 로그
+docker-compose logs -f app
 
-## 기여
+# Nginx 로그
+tail -f /var/log/nginx/access.log
+```
 
-1. 이슈 생성
-2. 브랜치 생성
-3. 변경사항 커밋
-4. PR 생성
+## 📞 지원
 
-## 라이선스
+- **이슈 리포트**: [GitHub Issues](https://github.com/your-username/ywlab-ai-test/issues)
+- **문서**: [Wiki](https://github.com/your-username/ywlab-ai-test/wiki)
+- **이메일**: support@ywlab.com
 
-이 프로젝트는 영우랩스의 내부 사용을 위한 프로젝트입니다.
+## 📄 라이선스
+
+이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
+## 👥 기여자
+
+- **개발팀** - 초기 개발
+- **AI팀** - AI 모델 통합
+- **DevOps팀** - 배포 자동화
+
+---
+
+**YWLab AI Test Platform** - AI 기술을 활용한 스마트한 업무 환경을 제공합니다.

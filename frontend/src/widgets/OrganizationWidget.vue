@@ -46,7 +46,7 @@ export default {
       this.loading = true;
       this.error = null;
     try {
-      const res = await api.get('/api/employee/list')
+      const res = await api.get('/employee/list')
         if (res.data && res.data.success && Array.isArray(res.data.data)) {
         this.employees = res.data.data
       } else {

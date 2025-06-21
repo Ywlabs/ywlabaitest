@@ -6,4 +6,6 @@ declare module '*.vue' {
   export default component
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://0.0.0.0:5000'; 
+declare global {
+  const API_BASE_URL: string
+} 

@@ -1,0 +1,22 @@
+{
+  "name": "ywlab-integrated",
+  "version": "1.0.0",
+  "description": "YWLab Frontend + Backend 통합 개발 서버",
+  "scripts": {
+    "dev": "python apply/apply_dev/dev-server.py",
+    "dev:auto": "python apply/apply_dev/auto-dev.py",
+    "build": "cd frontend && npm run build",
+    "build:prod": "cd frontend && npm run build:prod",
+    "start": "cd backend && python app.py",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "setup": "npm run install:all && echo '설치 완료! npm run dev로 서버를 시작하세요.'",
+    "check:venv": "python -c \"import sys; print('가상환경:', '활성화됨' if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix) else '비활성화됨')\"",
+    "deploy:quick": "cd apply/apply_prod && deploy-quick.bat",
+    "deploy:full": "cd apply/apply_prod && deploy.sh"
+  },
+  "keywords": ["ywlab", "flask", "vue", "integrated"],
+  "author": "YWLab Team",
+  "license": "MIT"
+} 

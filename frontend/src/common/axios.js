@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { getConfig } from '../config/env.js';
 
-// Vite 환경변수 사용
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// 환경별 API URL 사용
+const API_BASE_URL = getConfig('API_BASE_URL');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -52,8 +53,8 @@ const refreshToken = async () => {
       throw new Error('갱신할 토큰이 없습니다.');
     }
     
-    // 토큰 갱신 API 호출 (백엔드에서 구현 필요)
-    const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {}, {
+    // 토큰 갱신 API 호출 (api 인스턴스 사용)
+    const response = await api.post('/auth/refresh', {}, {
       headers: {
         'Authorization': `Bearer ${currentToken}`
       }

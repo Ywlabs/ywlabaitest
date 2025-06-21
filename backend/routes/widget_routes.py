@@ -6,9 +6,9 @@ from routes import jwt_required  # JWT 인증 데코레이터 import
 
 logger = logging.getLogger(__name__)
 
-widget_bp = Blueprint('widgets', __name__, url_prefix='/api/widgets')
+widget_bp = Blueprint('widgets', __name__)
 
-@widget_bp.route('/search', methods=['POST'])
+@widget_bp.route('/api/widgets/search', methods=['POST'])
 @jwt_required  # JWT 인증 필요
 def widget_search():
     """

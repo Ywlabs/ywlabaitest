@@ -62,8 +62,6 @@
       </span>
     </div>
     <CommonToast v-if="toastMessage" :message="toastMessage" :type="toastType" @hidden="toastMessage = ''" />
-    <CommonLoading v-if="isLoading" message="AI가 답변을 생성 중입니다..." />
-    <CommonError v-if="errorMessage" :message="errorMessage" @retry="retryLastAction" />
   </div>
 </template>
 
@@ -72,17 +70,13 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import api from '@/common/axios'
 import CommonToast from './CommonToast.vue'
-import CommonLoading from './CommonLoading.vue'
-import CommonError from './CommonError.vue'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8085'
 
 export default {
   name: 'ChatInterface',
   components: {
     CommonToast,
-    CommonLoading,
-    CommonError,
   },
   emits: ['open-widget'],
   props: {
@@ -97,8 +91,7 @@ export default {
       userInput: '',
       isLoading: false,
       toastMessage: '',
-      toastType: 'info',
-      errorMessage: ''
+      toastType: 'info'
     }
   },
   mounted() {
@@ -121,7 +114,7 @@ export default {
     },
     async loadChatHistory() {
       try {
-        const response = await api.get('/api/chat/history')
+        const response = await api.get('/chat/history')
         const res = response.data
 
         if (!res.success) {
@@ -170,7 +163,7 @@ export default {
         this.scrollToBottom()
 
       } catch (error) {
-        this.showError('네트워크 오류로 채팅 기록을 불러올 수 없습니다.')
+        this.showToast('네트워크 오류로 채팅 기록을 불러올 수 없습니다.', 'error')
         this.messages = [{
           type: 'ai',
           content: '안녕하세요! 영우랩스 AI 어시스턴트입니다. 무엇을 도와드릴까요?'
@@ -192,7 +185,7 @@ export default {
       this.isLoading = true
       this.scrollToBottom()
       try {
-        const response = await api.post('/api/chat', { message: userMessage })
+        const response = await api.post('/chat', { message: userMessage })
         const res = response.data
 
         if (!res.success) {
@@ -212,8 +205,8 @@ export default {
         })
 
       } catch (error) {
-        this.showError('네트워크 오류로 메시지를 보낼 수 없습니다.')
-        this.messages.push({ type: 'ai', content: '네트워크 오류로 메시지를 보낼 수 없습니다.' })
+        this.showToast('네트워크 오류로 메시지를 보낼 수 없습니다.', 'error')
+        this.messages.push({ type: 'ai', content: '죄송합니다. 일시적인 네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' })
       } finally {
         this.isLoading = false
         this.scrollToBottom()
@@ -251,13 +244,6 @@ export default {
     showToast(msg, type = 'info') {
       this.toastMessage = msg
       this.toastType = type
-    },
-    showError(msg) {
-      this.errorMessage = msg
-    },
-    retryLastAction() {
-      // 마지막 동작 재시도 로직 (필요시 구현)
-      this.errorMessage = ''
     }
   },
   watch: {

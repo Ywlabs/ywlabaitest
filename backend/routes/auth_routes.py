@@ -8,7 +8,7 @@ from functools import wraps
 # 로거 설정
 logger = logging.getLogger(__name__)
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+auth_bp = Blueprint('auth', __name__)
 
 # JWT 인증 데코레이터 (먼저 정의)
 def jwt_required(f):
@@ -37,7 +37,7 @@ def jwt_required(f):
     return decorated
 
 # 로그인 엔드포인트
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.json
     email = data.get('email')
@@ -83,7 +83,7 @@ def login():
     })
 
 # 토큰 갱신 엔드포인트
-@auth_bp.route('/refresh', methods=['POST'])
+@auth_bp.route('/api/auth/refresh', methods=['POST'])
 @jwt_required
 def refresh_token():
     """JWT 토큰을 갱신합니다."""
@@ -126,7 +126,7 @@ def refresh_token():
         )
 
 # 내 정보 조회
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/api/auth/me', methods=['GET'])
 @jwt_required
 def me():
     user = g.user

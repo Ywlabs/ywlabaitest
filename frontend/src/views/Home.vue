@@ -184,7 +184,7 @@ export default {
   methods: {
     async fetchPopularQuestions() {
       try {
-        const res = await api.get('/api/chat/popular')
+        const res = await api.get('/chat/popular')
         if (res.data && res.data.success) {
           this.popularQuestions = res.data.data
         } else {

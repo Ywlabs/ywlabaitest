@@ -1,14 +1,44 @@
 from typing import List
 from langchain_community.document_loaders import (
     TextLoader,
-    Docx2txtLoader,
     PyPDFLoader
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from common.logger import setup_logger
+from docx import Document as DocxDocument
 
 logger = setup_logger('document_loader')
+
+class DocxLoader:
+    """python-docx를 사용한 DOCX 파일 로더"""
+    
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+    
+    def load(self) -> List[Document]:
+        """DOCX 파일을 로드하여 Document 리스트 반환"""
+        try:
+            doc = DocxDocument(self.file_path)
+            text = ""
+            
+            # 모든 단락에서 텍스트 추출
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text += paragraph.text + "\n"
+            
+            # 표에서 텍스트 추출
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            text += cell.text + "\n"
+            
+            return [Document(page_content=text, metadata={"source": self.file_path})]
+            
+        except Exception as e:
+            logger.error(f"DOCX 파일 로드 중 오류: {str(e)}")
+            return []
 
 def load_documents(file_path: str) -> List[Document]:
     """
@@ -24,7 +54,7 @@ def load_documents(file_path: str) -> List[Document]:
         elif file_path.endswith('.pdf'):
             loader = PyPDFLoader(file_path)
         elif file_path.endswith('.docx'):
-            loader = Docx2txtLoader(file_path)
+            loader = DocxLoader(file_path)
         else:
             logger.error(f"지원하지 않는 파일 형식: {file_path}")
             return []
